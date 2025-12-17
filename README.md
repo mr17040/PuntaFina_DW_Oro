@@ -132,7 +132,7 @@ El sistema implementa un **Esquema Estrella Conformado** con **20 dimensiones** 
                             │
             ┌───────────────┼───────────────┐
             │               │               │
-       dim_fecha      dim_producto    dim_usuario
+       dim_fecha      dim_detalle_venta    dim_usuario
             │               │               │
     ┌───────┼───────┐      │       ┌───────┼───────┐
     │       │       │      │       │       │       │
@@ -165,7 +165,7 @@ El sistema implementa un **Esquema Estrella Conformado** con **20 dimensiones** 
 | # | Tabla | Registros | Descripción | Fuente |
 |---|-------|-----------|-------------|--------|
 | 1 | **dim_cliente** | ~500 | Clientes únicos con información de contacto | oro_customer |
-| 2 | **dim_producto** 🔗 | ~200 | Catálogo de productos de calzado | oro_product |
+| 2 | **dim_detalle_venta** 🔗 | ~200 | Detalle de productos con métricas de venta | oro_product |
 | 3 | **dim_usuario** 🔗 | ~20 | Usuarios del sistema (vendedores, admin) | oro_user |
 | 4 | **dim_sitio_web** | ~3 | Sitios web y canales de venta | oro_website |
 | 5 | **dim_canal** | ~4 | Canales de venta (online/tienda física) | oro_channel |
@@ -197,7 +197,7 @@ El sistema implementa un **Esquema Estrella Conformado** con **20 dimensiones** 
 | 16 | **dim_movimiento_tipo** | ~9 | Tipos de movimiento (entrada/salida) | CSV: tipos_movimiento.csv |
 
 **Dimensiones Compartidas:**
-- 🔗 **dim_producto** (compartida con Ventas)
+- 🔗 **dim_detalle_venta** (compartida con Ventas)
 - 🔗 **dim_usuario** (compartida con Ventas y Finanzas)
 - 🔗 **dim_fecha** (compartida con todos)
 
@@ -263,7 +263,7 @@ Las **dimensiones conformadas** son dimensiones compartidas entre múltiples mó
 
 | Dimensión | Módulos | Beneficio |
 |-----------|---------|-----------|
-| 🔗 **dim_producto** | Ventas + Inventario | Analizar ventas vs. inventario del mismo producto |
+| 🔗 **dim_detalle_venta** | Ventas + Inventario | Analizar ventas vs. inventario del mismo producto |
 | 🔗 **dim_usuario** | Ventas + Inventario + Finanzas | Rastrear actividad de usuarios en todo el sistema |
 | 🔗 **dim_fecha** | Todos los módulos | Análisis temporal consistente en todo el DW |
 
@@ -279,7 +279,7 @@ SELECT
     AVG(i.costo_unitario) as costo_promedio,
     SUM(v.total_linea_neto) - (SUM(v.cantidad) * AVG(i.costo_unitario)) as utilidad
 FROM fact_ventas v
-JOIN dim_producto p ON v.id_producto = p.id_producto  -- Dimensión conformada
+JOIN dim_detalle_venta p ON v.id_producto = p.id_producto  -- Dimensión conformada
 JOIN fact_inventario i ON i.id_producto = p.id_producto
 WHERE v.id_fecha >= '20240101'
 GROUP BY p.id_producto, p.nombre, p.sku
@@ -319,11 +319,12 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 
 ---
 
-### 👤 dim_cliente
+### 👤 dim_cliente (⭐ ENRIQUECIDA PARA ML Y RECOMENDACIONES)
 **Módulo:** VENTAS  
-**Origen:** oro_customer (OroCommerce)  
-**Propósito:** Clientes B2B con información organizacional
+**Origen:** oro_customer (OroCommerce) + análisis de comportamiento desde fact_ventas  
+**Propósito:** Clientes B2B con **análisis RFM, patrones de compra y métricas para recomendaciones personalizadas**
 
+#### Campos Base:
 | Campo | Tipo | Clave | Descripción |
 |-------|------|-------|-------------|
 | id_cliente | TEXT | PK | ID único del cliente |
@@ -333,13 +334,80 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 | estado | TEXT | - | activo, inactivo, bloqueado |
 | fecha_registro | DATE | - | Fecha de creación del cliente |
 
+#### 🎯 Métricas RFM para Segmentación:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| **recency_dias** | INTEGER | Días desde la última compra |
+| **frequency_compras** | INTEGER | Número total de compras |
+| **monetary_total_usd** | DECIMAL(15,2) | Valor total gastado en USD |
+| **rfm_score** | INTEGER | Score RFM combinado (1-10) |
+| **rfm_segment** | TEXT | Segmento: Champions, Loyal, At Risk, Lost, etc. |
+
+#### 📊 Análisis de Comportamiento de Compra:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| **ticket_promedio_usd** | DECIMAL(12,2) | Ticket promedio por compra |
+| **productos_unicos_comprados** | INTEGER | Cantidad de productos diferentes comprados |
+| **categorias_compradas** | TEXT[] | Array de categorías compradas |
+| **categoria_preferida** | TEXT | Categoría más comprada |
+
+#### ⏰ Patrones Temporales:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| **dia_semana_preferido** | TEXT | Día que más compra (Lunes, Martes...) |
+| **hora_preferida_compra** | TEXT | Franja horaria preferida |
+| **mes_mayor_compra** | TEXT | Mes con mayor volumen de compras |
+| **frecuencia_mensual** | DECIMAL(5,2) | Compras promedio por mes |
+
+#### 🔮 Predicciones y Tendencias:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| **tendencia_compra** | TEXT | Estable, Creciente, Decreciente |
+| **probabilidad_churn** | DECIMAL(5,4) | Probabilidad de abandono (0-1) |
+| **valor_lifetime_proyectado** | DECIMAL(15,2) | CLV proyectado |
+
+#### 🎁 Top Productos (Market Basket Analysis):
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| **top_1_producto_id** | TEXT | ID del producto más comprado |
+| **top_1_producto_nombre** | TEXT | Nombre del producto #1 |
+| **top_1_producto_veces** | INTEGER | Veces comprado |
+| **top_2_producto_id** | TEXT | ID del producto #2 |
+| **top_2_producto_nombre** | TEXT | Nombre del producto #2 |
+| **top_2_producto_veces** | INTEGER | Veces comprado |
+| **top_3_producto_id** | TEXT | ID del producto #3 |
+| **top_3_producto_nombre** | TEXT | Nombre del producto #3 |
+| **top_3_producto_veces** | INTEGER | Veces comprado |
+
+#### 💰 Análisis de Precios y Promociones:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| **sensibilidad_precio** | TEXT | Alta, Media, Baja |
+| **descuento_promedio_usado** | DECIMAL(5,2) | % promedio de descuento usado |
+| **usa_promociones** | BOOLEAN | Si utiliza promociones activamente |
+
+#### 📱 Preferencias de Canal:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| **canal_preferido** | TEXT | Canal de venta preferido |
+| **metodo_pago_preferido** | TEXT | Método de pago más usado |
+| **metodo_envio_preferido** | TEXT | Método de envío preferido |
+
+#### 🔄 Metadata para ETL y ML:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| **ultima_compra** | DATE | Fecha de última compra |
+| **fecha_ultimo_calculo** | TIMESTAMP | Timestamp del último cálculo |
+| **necesita_recalculo** | BOOLEAN | Flag para recalcular métricas |
+
 ---
 
-### 📦 dim_producto (CONFORMADA - Compartida entre Ventas e Inventario)
+### 📦 dim_detalle_venta (CONFORMADA - Compartida entre Ventas e Inventario)
 **Módulo:** VENTAS | INVENTARIO  
 **Origen:** oro_product + métricas calculadas desde fact_ventas y fact_inventario  
-**Propósito:** Catálogo de productos enriquecido con KPIs de stock y rentabilidad
+**Propósito:** Catálogo de productos enriquecido con KPIs de stock, rentabilidad y **análisis para recomendaciones**
 
+#### Campos Base:
 | Campo | Tipo | Clave | Descripción |
 |-------|------|-------|-------------|
 | id_producto | TEXT | PK | ID único del producto |
@@ -349,22 +417,53 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 | unidad_medida | TEXT | - | Unidad (pza, kg, litro, etc.) |
 | estado | TEXT | - | enabled, disabled |
 | fecha_creacion | DATE | - | Fecha de creación |
-| **stock_inicial** | INTEGER | - | Stock al inicio del período |
-| **total_compras** | INTEGER | - | Total unidades compradas |
-| **total_ventas** | INTEGER | - | Total unidades vendidas |
-| **stock_actual** | INTEGER | - | Stock disponible actual |
-| **nivel_stock** | TEXT | - | Sin Stock, Bajo, Óptimo, Alto |
-| **alerta_stock** | TEXT | - | Sin Datos, Normal, Crítico |
-| **rotacion_stock** | DECIMAL(10,2) | - | Índice de rotación |
-| **precio_compra_promedio** | DECIMAL(10,2) | - | Precio promedio de compra USD |
-| **precio_venta_promedio** | DECIMAL(10,2) | - | Precio promedio de venta USD |
-| **margen_unitario_usd** | DECIMAL(10,2) | - | Margen por unidad vendida |
-| **margen_porcentaje** | DECIMAL(5,1) | - | Margen en % |
-| **valor_stock_actual_usd** | DECIMAL(12,2) | - | Valor del stock actual |
-| **inversion_total_usd** | DECIMAL(12,2) | - | Total invertido en compras |
-| **ingresos_totales_usd** | DECIMAL(12,2) | - | Total ingresos por ventas |
-| **roi_porcentaje** | DECIMAL(8,1) | - | Return on Investment % |
-| **fecha_ultimo_calculo** | TIMESTAMP | - | Timestamp del último cálculo |
+
+#### 📊 Inventario y Stock:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| **stock_inicial** | INTEGER | Stock al inicio del período |
+| **total_compras** | INTEGER | Total unidades compradas |
+| **total_ventas** | INTEGER | Total unidades vendidas |
+| **stock_actual** | INTEGER | Stock disponible actual |
+| **nivel_stock** | TEXT | Sin Stock, Bajo, Óptimo, Alto |
+| **alerta_stock** | TEXT | Sin Datos, Normal, Crítico |
+| **rotacion_stock** | DECIMAL(10,2) | Índice de rotación |
+
+#### 💵 Pricing y Márgenes:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| **precio_compra_promedio** | DECIMAL(10,2) | Precio promedio de compra USD |
+| **precio_venta_promedio** | DECIMAL(10,2) | Precio promedio de venta USD |
+| **margen_unitario_usd** | DECIMAL(10,2) | Margen por unidad vendida |
+| **margen_porcentaje** | DECIMAL(5,1) | Margen en % |
+
+#### 💰 Valoración Financiera:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| **valor_stock_actual_usd** | DECIMAL(12,2) | Valor del stock actual |
+| **inversion_total_usd** | DECIMAL(12,2) | Total invertido en compras |
+| **ingresos_totales_usd** | DECIMAL(12,2) | Total ingresos por ventas |
+| **roi_porcentaje** | DECIMAL(8,1) | Return on Investment % |
+
+#### 🎯 Análisis de Ventas para Recomendaciones:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| **clientes_unicos_compraron** | INTEGER | Cantidad de clientes únicos |
+| **veces_comprado** | INTEGER | Veces que se vendió el producto |
+| **categoria_producto** | TEXT | Categoría del producto |
+
+#### 🛒 Market Basket Analysis:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| **productos_frecuentes_juntos** | TEXT[] | Array de IDs de productos comprados juntos |
+| **score_popularidad** | DECIMAL(5,2) | Score de popularidad (0-10) |
+
+#### 📈 Tendencias:
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| **tendencia_ventas** | TEXT | Estable, Creciente, Decreciente |
+| **estacionalidad** | TEXT | Patrón estacional detectado |
+| **fecha_ultimo_calculo** | TIMESTAMP | Timestamp del último cálculo |
 
 ---
 
@@ -570,7 +669,7 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 | id_line_item | TEXT | FK | → dim_line_item |
 | id_order | TEXT | FK | → dim_orden |
 | id_cliente | TEXT | FK | → dim_cliente |
-| id_producto | TEXT | FK | → dim_producto |
+| id_producto | TEXT | FK | → dim_detalle_venta |
 | id_usuario | TEXT | FK | → dim_usuario |
 | id_sitio_web | TEXT | FK | → dim_sitio_web |
 | id_fecha | BIGINT | FK | → dim_fecha |
@@ -673,7 +772,7 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 | Campo | Tipo | Clave | Descripción |
 |-------|------|-------|-------------|
 | id_movimiento | SERIAL | PK | ID autoincremental del movimiento |
-| id_producto | TEXT | FK | → dim_producto |
+| id_producto | TEXT | FK | → dim_detalle_venta |
 | id_almacen | TEXT | FK | → dim_almacen |
 | id_proveedor | TEXT | FK | → dim_proveedor (nullable) |
 | id_tipo_movimiento | TEXT | FK | → dim_movimiento_tipo |
@@ -829,56 +928,64 @@ Esta sección muestra los modelos dimensionales (esquema estrella) de cada módu
 
 ---
 
-### 🛒 MÓDULO VENTAS - Modelo Dimensional
+### 🛒 MÓDULO VENTAS - Modelo Dimensional (⭐ Optimizado para ML y Recomendaciones)
 
 **Esquema Estrella:** fact_ventas rodeada de 13 dimensiones + 2 dimensiones desnormalizadas
 
 ```
-                           ┌─────────────────┐
-                           │   dim_fecha     │
-                           │  (CONFORMADA)   │
-                           └────────┬────────┘
-                                    │
-                                    │ 1:N
-┌──────────────┐                    │                    ┌──────────────┐
-│  dim_cliente │                    │                    │ dim_producto │
-│              │                    │                    │ (CONFORMADA) │
-└──────┬───────┘                    │                    └──────┬───────┘
-       │                            │                           │
-       │ 1:N                        │                    1:N    │
-       │                            │                           │
-       │        ┌────────────────┐  │  ┌────────────────┐       │
-       │        │  dim_usuario   │  │  │ dim_sitio_web  │       │
-       │        │  (CONFORMADA)  │  │  │                │       │
-       │        └────────┬───────┘  │  └────────┬───────┘       │
-       │                 │          │           │               │
-       │                 │ 1:N      │      1:N  │               │
-       │                 │          │           │               │
-┌──────┴─────────────────┴──────────┴───────────┴───────────────┴──────┐
+                           ┌─────────────────────┐
+                           │   dim_fecha         │
+                           │  (CONFORMADA)       │
+                           └──────────┬──────────┘
+                                      │
+                                      │ 1:N
+┌─────────────────────┐               │               ┌──────────────────────┐
+│  dim_cliente        │               │               │ dim_detalle_venta    │
+│  ⭐ ENRIQUECIDA     │               │               │  (CONFORMADA)        │
+│  PARA ML            │               │               │  + Market Basket     │
+│                     │               │               └──────────┬───────────┘
+│ • RFM Score         │               │                          │
+│ • Segmentación      │               │                   1:N    │
+│ • Top 3 Productos   │               │                          │
+│ • Patrones Compra   │               │                          │
+│ • Probabilidad Churn│               │                          │
+│ • CLV Proyectado    │               │                          │
+└──────┬──────────────┘               │                          │
+       │                              │                          │
+       │ 1:N                          │                          │
+       │                              │                          │
+       │        ┌────────────────┐    │    ┌────────────────┐   │
+       │        │  dim_usuario   │    │    │ dim_sitio_web  │   │
+       │        │  (CONFORMADA)  │    │    │                │   │
+       │        └────────┬───────┘    │    └────────┬───────┘   │
+       │                 │            │             │           │
+       │                 │ 1:N        │        1:N  │           │
+       │                 │            │             │           │
+┌──────┴─────────────────┴────────────┴─────────────┴───────────┴──────┐
 │                                                                       │
-│                          FACT_VENTAS                                 │
-│                     (Tabla de Hechos Central)                        │
+│                       🎯 FACT_VENTAS                                 │
+│              (Tabla de Hechos - Alimenta Algoritmos ML)              │
 │                                                                       │
 │  Granularidad: 1 producto por orden                                 │
 │                                                                       │
-│  MEDIDAS CLAVE:                                                      │
+│  📊 MEDIDAS PARA ANÁLISIS Y RECOMENDACIONES:                         │
 │  • cantidad                    NUMERIC(10,2)                         │
 │  • precio_unitario             NUMERIC(10,2)                         │
 │  • total_linea                 NUMERIC(15,2)                         │
 │  • subtotal_orden              NUMERIC(15,2)                         │
 │  • total_orden                 NUMERIC(15,2)                         │
-│  • descuento_promocion         NUMERIC(15,2)                         │
-│  • stock_actual                NUMERIC(10,2)                         │
+│  • descuento_promocion         NUMERIC(15,2)  → Sensibilidad precio  │
+│  • stock_actual                NUMERIC(10,2)  → Disponibilidad       │
 │  • stock_inicial               NUMERIC(10,2)                         │
 │  • stock_restante              NUMERIC(10,2)                         │
 │  • total_linea_neto            NUMERIC(15,2)                         │
 │                                                                       │
-│  DIMENSIONES (13 FKs):                                               │
-│  id_cliente → dim_cliente                                            │
-│  id_producto → dim_producto                                          │
+│  🔗 DIMENSIONES (13 FKs):                                            │
+│  id_cliente → dim_cliente ⭐ (RFM + Preferencias)                    │
+│  id_producto → dim_detalle_venta (Market Basket)                     │
 │  id_usuario → dim_usuario                                            │
 │  id_sitio_web → dim_sitio_web                                        │
-│  id_fecha → dim_fecha                                                │
+│  id_fecha → dim_fecha (Patrones temporales)                          │
 │  id_promocion → dim_promocion                                        │
 │  id_canal → dim_canal                                                │
 │  id_direccion → dim_direccion                                        │
@@ -903,12 +1010,27 @@ Esta sección muestra los modelos dimensionales (esquema estrella) de cada módu
         └────────────────┘            └─────────────────┘
 ```
 
-**Características del Modelo de Ventas:**
+**🎯 Características del Modelo de Ventas (ML-Ready):**
 - ✅ **13 dimensiones** conectadas a la tabla de hechos
 - ✅ **10 medidas** para análisis de ventas y stock
+- ✅ **dim_cliente enriquecida con 50+ campos** para ML:
+  - Análisis RFM (Recency, Frequency, Monetary)
+  - Segmentación automática de clientes
+  - Top 3 productos más comprados por cliente
+  - Patrones temporales (día, hora, mes preferido)
+  - Probabilidad de churn
+  - Customer Lifetime Value proyectado
+- ✅ **dim_detalle_venta con Market Basket Analysis**:
+  - Productos frecuentemente comprados juntos
+  - Score de popularidad
+  - Análisis de tendencias
+- ✅ **Permite recomendaciones personalizadas basadas en**:
+  - Historial de compra del cliente
+  - Productos similares
+  - Collaborative filtering
+  - Content-based filtering
 - ✅ **3 dimensiones conformadas** compartidas con otros módulos
-- ✅ **2 dimensiones desnormalizadas** (dim_orden, dim_line_item) para mejorar performance
-- ✅ Permite análisis por: cliente, producto, tiempo, canal, promoción, ubicación
+- ✅ **2 dimensiones desnormalizadas** (dim_orden, dim_line_item) para performance
 
 ---
 
@@ -924,7 +1046,8 @@ Esta sección muestra los modelos dimensionales (esquema estrella) de cada módu
                                     │
                                     │ 1:N
 ┌──────────────┐                    │                    ┌──────────────┐
-│ dim_producto │                    │                    │ dim_almacen  │
+│ dim_detalle_ │                    │                    │ dim_almacen  │
+│    venta     │                    │                    │              │
 │ (CONFORMADA) │                    │                    │              │
 └──────┬───────┘                    │                    └──────┬───────┘
        │                            │                           │
@@ -952,7 +1075,7 @@ Esta sección muestra los modelos dimensionales (esquema estrella) de cada módu
 │  • stock_resultante            NUMERIC(10,2)                         │
 │                                                                       │
 │  DIMENSIONES (6 FKs):                                                │
-│  id_producto → dim_producto (CONFORMADA)                             │
+│  id_producto → dim_detalle_venta (CONFORMADA)                        │
 │  id_almacen → dim_almacen                                            │
 │  id_proveedor → dim_proveedor (nullable)                             │
 │  id_tipo_movimiento → dim_movimiento_tipo                            │
@@ -1099,7 +1222,7 @@ Las siguientes dimensiones son **conformadas**, es decir, compartidas entre múl
 | Dimensión | Módulos que la Usan | Propósito |
 |-----------|---------------------|-----------|
 | **dim_fecha** | VENTAS + INVENTARIO + FINANZAS | Análisis temporal consistente |
-| **dim_producto** | VENTAS + INVENTARIO | Catálogo único de productos con KPIs |
+| **dim_detalle_venta** | VENTAS + INVENTARIO | Catálogo único de productos con KPIs |
 | **dim_usuario** | VENTAS + INVENTARIO + FINANZAS | Trazabilidad y responsables |
 
 **Beneficios de las Dimensiones Conformadas:**
@@ -1107,6 +1230,209 @@ Las siguientes dimensiones son **conformadas**, es decir, compartidas entre múl
 - ✅ Garantiza consistencia entre módulos
 - ✅ Permite análisis cross-módulo (ej: ventas vs inventario por producto)
 - ✅ Simplifica el mantenimiento del DW
+
+---
+
+## 🤖 Sistema de Recomendaciones Personalizadas
+
+### Arquitectura de Recomendaciones basada en dim_cliente
+
+El **Data Warehouse ha sido diseñado específicamente para alimentar sistemas de recomendación personalizados**, con dim_cliente como piedra angular del motor de recomendaciones.
+
+#### 🎯 Tipos de Recomendaciones Soportadas
+
+**1. Collaborative Filtering (Basado en Usuarios Similares)**
+```sql
+-- Encontrar clientes similares usando RFM Score y patrones
+SELECT 
+    c2.id_cliente,
+    c2.nombre,
+    c2.rfm_segment,
+    -- Calcular similitud basada en múltiples factores
+    (CASE WHEN c1.rfm_segment = c2.rfm_segment THEN 3 ELSE 0 END +
+     CASE WHEN c1.categoria_preferida = c2.categoria_preferida THEN 2 ELSE 0 END +
+     CASE WHEN c1.canal_preferido = c2.canal_preferido THEN 1 ELSE 0 END) as similarity_score
+FROM dim_cliente c1
+CROSS JOIN dim_cliente c2
+WHERE c1.id_cliente = 'CLIENTE_123'
+  AND c2.id_cliente != 'CLIENTE_123'
+  AND c2.estado = 'activo'
+ORDER BY similarity_score DESC
+LIMIT 10;
+
+-- Recomendar productos que compraron clientes similares
+SELECT DISTINCT
+    dv.nombre as producto_recomendado,
+    dv.sku,
+    COUNT(DISTINCT fv.id_cliente) as clientes_lo_compraron,
+    AVG(fv.total_linea) as ticket_promedio
+FROM fact_ventas fv
+JOIN dim_detalle_venta dv ON fv.id_producto = dv.id_producto
+WHERE fv.id_cliente IN (
+    -- Top 10 clientes similares
+    SELECT c2.id_cliente FROM dim_cliente c1
+    CROSS JOIN dim_cliente c2
+    WHERE c1.id_cliente = 'CLIENTE_123'
+      AND c2.rfm_segment = c1.rfm_segment
+    LIMIT 10
+)
+  AND fv.id_producto NOT IN (
+    -- Excluir productos ya comprados por el cliente
+    SELECT id_producto FROM fact_ventas WHERE id_cliente = 'CLIENTE_123'
+  )
+GROUP BY dv.nombre, dv.sku
+ORDER BY clientes_lo_compraron DESC, ticket_promedio DESC
+LIMIT 5;
+```
+
+**2. Content-Based Filtering (Basado en Historial del Cliente)**
+```sql
+-- Recomendar productos de la categoría preferida del cliente
+SELECT 
+    c.nombre as cliente,
+    c.categoria_preferida,
+    c.top_1_producto_nombre,
+    c.top_2_producto_nombre,
+    c.top_3_producto_nombre,
+    -- Productos similares en la misma categoría
+    dv.nombre as producto_sugerido,
+    dv.score_popularidad,
+    dv.tendencia_ventas
+FROM dim_cliente c
+JOIN dim_detalle_venta dv ON dv.categoria_producto = c.categoria_preferida
+WHERE c.id_cliente = 'CLIENTE_123'
+  AND dv.estado = 'Activo'
+  AND dv.stock_actual > 0
+  -- Excluir productos ya en top 3
+  AND dv.nombre NOT IN (c.top_1_producto_nombre, c.top_2_producto_nombre, c.top_3_producto_nombre)
+ORDER BY dv.score_popularidad DESC, dv.tendencia_ventas DESC
+LIMIT 10;
+```
+
+**3. Market Basket Analysis (Productos Frecuentes Juntos)**
+```sql
+-- Recomendar productos comprados frecuentemente juntos
+SELECT 
+    dv.nombre as producto_comprado,
+    unnest(dv.productos_frecuentes_juntos) as id_producto_relacionado,
+    dv2.nombre as producto_relacionado,
+    dv2.score_popularidad
+FROM fact_ventas fv
+JOIN dim_detalle_venta dv ON fv.id_producto = dv.id_producto
+JOIN dim_detalle_venta dv2 ON dv2.id_producto = ANY(dv.productos_frecuentes_juntos)
+WHERE fv.id_cliente = 'CLIENTE_123'
+  AND dv2.stock_actual > 0
+  AND dv2.id_producto NOT IN (
+    SELECT id_producto FROM fact_ventas WHERE id_cliente = 'CLIENTE_123'
+  )
+GROUP BY dv.nombre, id_producto_relacionado, dv2.nombre, dv2.score_popularidad
+ORDER BY dv2.score_popularidad DESC
+LIMIT 5;
+```
+
+**4. Recomendaciones Basadas en Tendencias y Estacionalidad**
+```sql
+-- Productos trending en el segmento del cliente
+SELECT 
+    c.rfm_segment,
+    dv.nombre as producto,
+    dv.tendencia_ventas,
+    dv.estacionalidad,
+    COUNT(DISTINCT fv.id_cliente) as clientes_compraron,
+    SUM(fv.cantidad) as total_vendido,
+    AVG(fv.precio_unitario) as precio_promedio
+FROM dim_cliente c
+JOIN dim_cliente c2 ON c2.rfm_segment = c.rfm_segment
+JOIN fact_ventas fv ON fv.id_cliente = c2.id_cliente
+JOIN dim_detalle_venta dv ON fv.id_producto = dv.id_producto
+JOIN dim_fecha f ON fv.id_fecha = f.id_fecha
+WHERE c.id_cliente = 'CLIENTE_123'
+  AND dv.tendencia_ventas = 'Creciente'
+  AND f.año = EXTRACT(YEAR FROM CURRENT_DATE)
+  AND f.mes >= EXTRACT(MONTH FROM CURRENT_DATE) - 1
+  AND dv.id_producto NOT IN (
+    SELECT id_producto FROM fact_ventas WHERE id_cliente = 'CLIENTE_123'
+  )
+GROUP BY c.rfm_segment, dv.nombre, dv.tendencia_ventas, dv.estacionalidad
+ORDER BY total_vendido DESC
+LIMIT 5;
+```
+
+**5. Recomendaciones Anti-Churn (Retención)**
+```sql
+-- Para clientes con alta probabilidad de churn
+SELECT 
+    c.nombre,
+    c.probabilidad_churn,
+    c.rfm_segment,
+    c.recency_dias,
+    -- Ofertas personalizadas basadas en su historial
+    c.top_1_producto_nombre as producto_favorito,
+    c.metodo_pago_preferido,
+    c.descuento_promedio_usado,
+    -- Sugerir promociones agresivas
+    CASE 
+        WHEN c.probabilidad_churn > 0.7 THEN 'Descuento 30% en producto favorito'
+        WHEN c.probabilidad_churn > 0.5 THEN 'Descuento 20% + envío gratis'
+        WHEN c.probabilidad_churn > 0.3 THEN 'Descuento 15%'
+        ELSE 'Recordatorio de nuevos productos'
+    END as estrategia_retencion
+FROM dim_cliente c
+WHERE c.probabilidad_churn > 0.3
+  AND c.estado = 'activo'
+  AND c.recency_dias > 60
+ORDER BY c.probabilidad_churn DESC, c.monetary_total_usd DESC;
+```
+
+#### 📊 Métricas para Evaluar Recomendaciones
+
+```sql
+-- Dashboard de efectividad de recomendaciones
+WITH recomendaciones_aceptadas AS (
+    SELECT 
+        c.rfm_segment,
+        c.categoria_preferida,
+        COUNT(DISTINCT c.id_cliente) as total_clientes,
+        AVG(c.frequency_compras) as freq_promedio,
+        AVG(c.monetary_total_usd) as valor_promedio,
+        AVG(c.ticket_promedio_usd) as ticket_promedio,
+        SUM(CASE WHEN c.recency_dias <= 30 THEN 1 ELSE 0 END) as clientes_activos,
+        SUM(CASE WHEN c.usa_promociones THEN 1 ELSE 0 END) as usan_promociones
+    FROM dim_cliente c
+    WHERE c.estado = 'activo'
+    GROUP BY c.rfm_segment, c.categoria_preferida
+)
+SELECT 
+    rfm_segment,
+    categoria_preferida,
+    total_clientes,
+    freq_promedio,
+    ROUND(valor_promedio, 2) as valor_promedio_usd,
+    ROUND(ticket_promedio, 2) as ticket_promedio_usd,
+    ROUND(100.0 * clientes_activos / total_clientes, 1) as pct_activos,
+    ROUND(100.0 * usan_promociones / total_clientes, 1) as pct_usa_promociones
+FROM recomendaciones_aceptadas
+ORDER BY valor_promedio DESC;
+```
+
+#### 🚀 Pipeline de Recomendaciones
+
+**Flujo de Procesamiento:**
+
+1. **ETL Enriquecimiento** → `build_all_dimensions.py` calcula métricas RFM
+2. **Actualización Diaria** → Recalcula scores y preferencias desde `fact_ventas`
+3. **Segmentación** → Clasifica clientes en segmentos RFM
+4. **Generación de Recomendaciones** → Algoritmos ML consumen dim_cliente
+5. **Personalización** → API entrega recomendaciones al frontend
+6. **Medición** → Tracking de conversión y ajuste de algoritmos
+
+**Campos Clave para ML:**
+- `rfm_score` → Feature principal para segmentación
+- `top_1/2/3_producto_*` → Features para content-based filtering
+- `categoria_preferida` → Feature para clustering
+- `probabilidad_churn` → Target para modelos predictivos
+- `valor_lifetime_proyectado` → Feature para priorización
+- `productos_frecuentes_juntos` → Feature para market basket
 
 ---
 
@@ -1362,7 +1688,7 @@ Esta tabla muestra cómo las tablas de OroCommerce se transforman en las dimensi
 | Tabla Origen (OroCommerce/OroCRM) | Dimensión DW | Tipo | Transformación |
 |-----------------------------------|--------------|------|----------------|
 | **oro_customer** | dim_cliente | Directa | Extracción simple con limpieza de datos |
-| **oro_product** | dim_producto 🔗 | Conformada | Enriquecida con métricas de stock/ROI |
+| **oro_product** | dim_detalle_venta 🔗 | Conformada | Enriquecida con métricas de stock/ROI |
 | **oro_user** | dim_usuario 🔗 | Conformada | Compartida entre 3 módulos |
 | **oro_website** | dim_sitio_web | Directa | Extracción simple |
 | **orocrm_channel** | dim_canal | Directa | Clasificación de canales de venta (B2B, Magento, Custom) |
@@ -1388,7 +1714,7 @@ Esta tabla muestra cómo las tablas de OroCommerce se transforman en las dimensi
 
 ### 📈 Transformaciones ETL Principales
 
-#### 1️⃣ Enriquecimiento de dim_producto
+#### 1️⃣ Enriquecimiento de dim_detalle_venta
 
 ```sql
 -- Ejemplo: Agregar métricas de stock y rentabilidad
@@ -1512,7 +1838,7 @@ WHERE ship_by >= '2024-01-01';
 │  │  DIMENSIONES (20 tablas)                            │  │
 │  │  ─────────────────────────                           │  │
 │  │  • dim_fecha (conformada) 🔗                        │  │
-│  │  • dim_producto (conformada) 🔗                     │  │
+│  │  • dim_detalle_venta (conformada) 🔗                     │  │
 │  │  • dim_usuario (conformada) 🔗                      │  │
 │  │  • 17 dimensiones específicas por módulo            │  │
 │  └──────────────────────────────────────────────────────┘  │
@@ -1724,7 +2050,7 @@ python orquestador_maestro.py
 # [1/4] Construyendo Dimensiones de Ventas...
 #    ✅ dim_fecha: 3,653 registros
 #    ✅ dim_cliente: 437 registros
-#    ✅ dim_producto: 198 registros
+#    ✅ dim_detalle_venta: 198 registros
 #    ... (continúa)
 #
 # [2/4] Construyendo Fact de Ventas...
@@ -1994,7 +2320,7 @@ TIENDA_02,Tienda La Gran Vía,tienda,San Salvador,Centro Comercial La Gran Vía,
 
 | Campo | Tipo | Obligatorio | Descripción |
 |-------|------|-------------|-------------|
-| `id_producto` | INTEGER | ✅ | ID del producto (FK a dim_producto) |
+| `id_producto` | INTEGER | ✅ | ID del producto (FK a dim_detalle_venta) |
 | `id_almacen` | TEXT | ✅ | ID del almacén (FK a dim_almacen) |
 | `id_proveedor` | TEXT | ❌ | ID del proveedor (solo para entradas) |
 | `id_tipo_movimiento` | TEXT | ✅ | Tipo de movimiento (ver tipos_movimiento.csv) |
@@ -2162,7 +2488,7 @@ python build_all_dimensions.py
 **Dimensiones que construye:**
 1. dim_fecha (calendario 2020-2030)
 2. dim_cliente (desde oro_customer)
-3. dim_producto 🔗 (desde oro_product)
+3. dim_detalle_venta 🔗 (desde oro_product)
 4. dim_usuario 🔗 (desde oro_user)
 5. dim_sitio_web (desde oro_website)
 6. dim_canal (desde orocrm_channel)
@@ -2271,7 +2597,7 @@ python setup_database.py
 
 **Ejemplo de DDL generado:**
 ```sql
-CREATE TABLE IF NOT EXISTS dim_producto (
+CREATE TABLE IF NOT EXISTS dim_detalle_venta (
     id_producto INTEGER PRIMARY KEY,
     sku TEXT NOT NULL,
     nombre TEXT NOT NULL,
@@ -2280,8 +2606,8 @@ CREATE TABLE IF NOT EXISTS dim_producto (
     activo BOOLEAN
 );
 
-CREATE INDEX idx_dim_producto_sku ON dim_producto(sku);
-CREATE INDEX idx_dim_producto_categoria ON dim_producto(categoria);
+CREATE INDEX idx_dim_detalle_venta_sku ON dim_detalle_venta(sku);
+CREATE INDEX idx_dim_detalle_venta_categoria ON dim_detalle_venta(categoria);
 ```
 
 **Salida:**
@@ -2307,7 +2633,7 @@ SELECT
     SUM(v.total_linea_neto) AS ingresos_totales,
     ROUND(AVG(v.precio_unitario), 2) AS precio_promedio
 FROM fact_ventas v
-JOIN dim_producto p ON v.id_producto = p.id_producto
+JOIN dim_detalle_venta p ON v.id_producto = p.id_producto
 JOIN dim_fecha f ON v.id_fecha = f.id_fecha
 WHERE f.año = 2024
 GROUP BY p.id_producto, p.sku, p.nombre, p.categoria
@@ -2330,7 +2656,7 @@ SELECT
     i.costo_unitario,
     i.stock_resultante * i.costo_unitario AS valor_inventario
 FROM fact_inventario i
-JOIN dim_producto p ON i.id_producto = p.id_producto
+JOIN dim_detalle_venta p ON i.id_producto = p.id_producto
 JOIN dim_almacen a ON i.id_almacen = a.id_almacen
 JOIN dim_fecha f ON i.id_fecha = f.id_fecha
 WHERE f.fecha = (SELECT MAX(fecha) FROM dim_fecha WHERE fecha <= CURRENT_DATE)
@@ -2395,7 +2721,7 @@ SELECT
         2
     ) AS margen_bruto_pct
 FROM fact_ventas v
-JOIN dim_producto p ON v.id_producto = p.id_producto
+JOIN dim_detalle_venta p ON v.id_producto = p.id_producto
 JOIN fact_inventario i ON i.id_producto = p.id_producto
 WHERE i.id_tipo_movimiento = 'MOV_ENTRADA'  -- Solo entradas para costo
 GROUP BY p.id_producto, p.sku, p.nombre, p.categoria
@@ -2647,7 +2973,7 @@ VACUUM ANALYZE;
 
 #### 1. `build_all_dimensions.py` (Ventas)
 Construye 13 dimensiones del módulo de ventas desde OroCommerce:
-- dim_fecha, dim_cliente, dim_producto, dim_usuario
+- dim_fecha, dim_cliente, dim_detalle_venta, dim_usuario
 - dim_sitio_web, dim_canal, dim_direccion, dim_envio
 - dim_pago, dim_impuestos, dim_promocion, dim_orden, dim_line_item
 
@@ -2700,7 +3026,7 @@ Pipeline completo en secuencia:
 ### Dimensiones (19)
 
 #### Módulo Ventas (13)
-- dim_fecha, dim_cliente, dim_producto, dim_usuario
+- dim_fecha, dim_cliente, dim_detalle_venta, dim_usuario
 - dim_sitio_web, dim_canal, dim_direccion, dim_envio
 - dim_pago, dim_impuestos, dim_promocion
 - dim_orden, dim_line_item
@@ -2712,7 +3038,7 @@ Pipeline completo en secuencia:
 - dim_movimiento_tipo - Tipos de movimiento
 
 **Dimensiones Compartidas:**
-- 🔗 dim_producto (del módulo Ventas)
+- 🔗 dim_detalle_venta (del módulo Ventas)
 - 🔗 dim_usuario (del módulo Ventas)
 
 **Dimensiones Compartidas:**
@@ -2727,19 +3053,19 @@ Pipeline completo en secuencia:
 - dim_tipo_transaccion - Tipos de transacción
 
 ---
-**Integración mediante dim_producto compartida:**
+**Integración mediante dim_detalle_venta compartida:**
 ```sql
 -- Costo de productos vendidos
 SELECT 
     v.id_producto,
-    p.nombre as producto,  -- desde dim_producto compartida
+    p.nombre as producto,  -- desde dim_detalle_venta compartida
     SUM(v.cantidad) as unidades_vendidas,
     AVG(i.costo_unitario) as costo_promedio,
     SUM(v.cantidad * i.costo_unitario) as costo_total,
     SUM(v.total_linea_neto) as ingresos,
     SUM(v.total_linea_neto) - SUM(v.cantidad * i.costo_unitario) as utilidad_bruta
 FROM fact_ventas v
-JOIN dim_producto p ON v.id_producto = p.id_producto  -- dimensión compartida
+JOIN dim_detalle_venta p ON v.id_producto = p.id_producto  -- dimensión compartida
 JOIN fact_inventario i ON v.id_producto = i.id_producto
 WHERE i.id_tipo_movimiento = 'MOV_ENTRADA'
 GROUP BY v.id_producto, p.nombreio) as costo_promedio,

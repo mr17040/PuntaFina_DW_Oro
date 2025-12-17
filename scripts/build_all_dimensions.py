@@ -182,9 +182,9 @@ def build_dim_cliente():
     return save_dimension(df, "dim_cliente")
 
 
-def build_dim_producto():
-    """Construye dimensión de productos SIMPLE según diccionario_campos.md"""
-    print("Construyendo dim_producto...")
+def build_dim_detalle_venta():
+    """Construye dimensión de detalle de venta (productos) según diccionario_campos.md"""
+    print("Construyendo dim_detalle_venta...")
 
     conn = get_oro_connection()
 
@@ -211,7 +211,7 @@ def build_dim_producto():
 
     print(f"   Productos base extraídos: {len(df)}")
 
-    return save_dimension(df, "dim_producto")
+    return save_dimension(df, "dim_detalle_venta")
 
 
 def build_dim_usuario():
@@ -804,7 +804,7 @@ def main():
     try:
         dimensions_built["dim_fecha"] = build_dim_fecha()
         dimensions_built["dim_cliente"] = build_dim_cliente()
-        dimensions_built["dim_producto"] = build_dim_producto()
+        dimensions_built["dim_detalle_venta"] = build_dim_detalle_venta()
         dimensions_built["dim_usuario"] = build_dim_usuario()
         dimensions_built["dim_sitio_web"] = build_dim_sitio_web()
         dimensions_built["dim_canal"] = build_dim_canal()

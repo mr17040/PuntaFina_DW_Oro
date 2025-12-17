@@ -112,11 +112,61 @@ def create_all_tables():
                 id_sitio_web TEXT NOT NULL,
                 tipo_cliente TEXT NOT NULL,
                 estado TEXT NOT NULL,
-                fecha_registro DATE NOT NULL
+                fecha_registro DATE NOT NULL,
+                
+                -- Métricas RFM para segmentación y recomendaciones
+                recency_dias INTEGER DEFAULT 0,
+                frequency_compras INTEGER DEFAULT 0,
+                monetary_total_usd DECIMAL(15,2) DEFAULT 0.0,
+                rfm_score INTEGER DEFAULT 0,
+                rfm_segment TEXT DEFAULT 'Nuevo',
+                
+                -- Análisis de comportamiento de compra
+                ticket_promedio_usd DECIMAL(12,2) DEFAULT 0.0,
+                productos_unicos_comprados INTEGER DEFAULT 0,
+                categorias_compradas TEXT[] DEFAULT '{}',
+                categoria_preferida TEXT DEFAULT NULL,
+                
+                -- Patrones temporales
+                dia_semana_preferido TEXT DEFAULT NULL,
+                hora_preferida_compra TEXT DEFAULT NULL,
+                mes_mayor_compra TEXT DEFAULT NULL,
+                frecuencia_mensual DECIMAL(5,2) DEFAULT 0.0,
+                
+                -- Tendencias y predicciones
+                tendencia_compra TEXT DEFAULT 'Estable',
+                probabilidad_churn DECIMAL(5,4) DEFAULT 0.0,
+                valor_lifetime_proyectado DECIMAL(15,2) DEFAULT 0.0,
+                
+                -- Top productos para recomendaciones
+                top_1_producto_id TEXT DEFAULT NULL,
+                top_1_producto_nombre TEXT DEFAULT NULL,
+                top_1_producto_veces INTEGER DEFAULT 0,
+                top_2_producto_id TEXT DEFAULT NULL,
+                top_2_producto_nombre TEXT DEFAULT NULL,
+                top_2_producto_veces INTEGER DEFAULT 0,
+                top_3_producto_id TEXT DEFAULT NULL,
+                top_3_producto_nombre TEXT DEFAULT NULL,
+                top_3_producto_veces INTEGER DEFAULT 0,
+                
+                -- Descuentos y promociones
+                sensibilidad_precio TEXT DEFAULT 'Media',
+                descuento_promedio_usado DECIMAL(5,2) DEFAULT 0.0,
+                usa_promociones BOOLEAN DEFAULT FALSE,
+                
+                -- Canales y preferencias
+                canal_preferido TEXT DEFAULT NULL,
+                metodo_pago_preferido TEXT DEFAULT NULL,
+                metodo_envio_preferido TEXT DEFAULT NULL,
+                
+                -- Metadata para ML
+                ultima_compra DATE DEFAULT NULL,
+                fecha_ultimo_calculo TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                necesita_recalculo BOOLEAN DEFAULT TRUE
             )
         """,
-        "dim_producto": """
-            CREATE TABLE IF NOT EXISTS dim_producto (
+        "dim_detalle_venta": """
+            CREATE TABLE IF NOT EXISTS dim_detalle_venta (
                 id_producto TEXT PRIMARY KEY,
                 sku TEXT NOT NULL,
                 nombre TEXT NOT NULL,
@@ -124,6 +174,8 @@ def create_all_tables():
                 unidad_medida TEXT NOT NULL,
                 estado TEXT NOT NULL,
                 fecha_creacion DATE NOT NULL,
+                
+                -- Inventario y stock
                 stock_inicial INTEGER DEFAULT 0,
                 total_compras INTEGER DEFAULT 0,
                 total_ventas INTEGER DEFAULT 0,
@@ -131,14 +183,32 @@ def create_all_tables():
                 nivel_stock TEXT DEFAULT 'Sin Stock',
                 alerta_stock TEXT DEFAULT 'Sin Datos',
                 rotacion_stock DECIMAL(10,2) DEFAULT 0.0,
+                
+                -- Pricing y márgenes
                 precio_compra_promedio DECIMAL(10,2) DEFAULT 0.0,
                 precio_venta_promedio DECIMAL(10,2) DEFAULT 0.0,
                 margen_unitario_usd DECIMAL(10,2) DEFAULT 0.0,
                 margen_porcentaje DECIMAL(5,1) DEFAULT 0.0,
+                
+                -- Valoración financiera
                 valor_stock_actual_usd DECIMAL(12,2) DEFAULT 0.0,
                 inversion_total_usd DECIMAL(12,2) DEFAULT 0.0,
                 ingresos_totales_usd DECIMAL(12,2) DEFAULT 0.0,
                 roi_porcentaje DECIMAL(8,1) DEFAULT 0.0,
+                
+                -- Análisis de ventas para recomendaciones
+                clientes_unicos_compraron INTEGER DEFAULT 0,
+                veces_comprado INTEGER DEFAULT 0,
+                categoria_producto TEXT DEFAULT NULL,
+                
+                -- Market Basket Analysis
+                productos_frecuentes_juntos TEXT[] DEFAULT '{}',
+                score_popularidad DECIMAL(5,2) DEFAULT 0.0,
+                
+                -- Tendencias
+                tendencia_ventas TEXT DEFAULT 'Estable',
+                estacionalidad TEXT DEFAULT NULL,
+                
                 fecha_ultimo_calculo TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """,
@@ -302,7 +372,7 @@ def create_all_tables():
                 
                 -- Foreign Keys hacia dimensiones
                 FOREIGN KEY (id_cliente) REFERENCES dim_cliente(id_cliente),
-                FOREIGN KEY (id_producto) REFERENCES dim_producto(id_producto),
+                FOREIGN KEY (id_producto) REFERENCES dim_detalle_venta(id_producto),
                 FOREIGN KEY (id_usuario) REFERENCES dim_usuario(id_usuario),
                 FOREIGN KEY (id_sitio_web) REFERENCES dim_sitio_web(id_sitio_web),
                 FOREIGN KEY (id_fecha) REFERENCES dim_fecha(id_fecha),
@@ -421,7 +491,7 @@ def create_all_tables():
                 mes INTEGER,
                 dia INTEGER,
                 
-                FOREIGN KEY (id_producto) REFERENCES dim_producto(id_producto),
+                FOREIGN KEY (id_producto) REFERENCES dim_detalle_venta(id_producto),
                 FOREIGN KEY (id_almacen) REFERENCES dim_almacen(id_almacen),
                 FOREIGN KEY (id_proveedor) REFERENCES dim_proveedor(id_proveedor),
                 FOREIGN KEY (id_tipo_movimiento) REFERENCES dim_movimiento_tipo(id_tipo_movimiento),
@@ -567,7 +637,7 @@ def create_all_tables():
         for col_name, col_definition in new_columns:
             try:
                 cur.execute(
-                    f"ALTER TABLE dim_producto ADD COLUMN {col_name} {col_definition}"
+                    f"ALTER TABLE dim_detalle_venta ADD COLUMN {col_name} {col_definition}"
                 )
                 print(f"    Columna agregada: {col_name}")
             except psycopg2.Error as e:
@@ -580,10 +650,10 @@ def create_all_tables():
         conn_update.commit()
         cur.close()
         conn_update.close()
-        print("    Columnas adicionales en dim_producto verificadas/creadas")
+        print("    Columnas adicionales en dim_detalle_venta verificadas/creadas")
 
     except Exception as e:
-        print(f"    Error actualizando dim_producto: {e}")
+        print(f"    Error actualizando dim_detalle_venta: {e}")
         if conn_update:
             try:
                 conn_update.rollback()
@@ -607,7 +677,7 @@ def create_foreign_keys():
         ),
         (
             "fk_fact_producto",
-            "ALTER TABLE fact_ventas ADD CONSTRAINT fk_fact_producto FOREIGN KEY (id_producto) REFERENCES dim_producto(id_producto)",
+            "ALTER TABLE fact_ventas ADD CONSTRAINT fk_fact_producto FOREIGN KEY (id_producto) REFERENCES dim_detalle_venta(id_producto)",
         ),
         (
             "fk_fact_usuario",
@@ -780,7 +850,7 @@ def fix_orphaned_references():
         if null_productos > 0:
             # Crear producto por defecto si no existe
             cur.execute(
-                """INSERT INTO dim_producto (
+                """INSERT INTO dim_detalle_venta (
                 id_producto, sku, nombre, descripcion, unidad_medida, estado, fecha_creacion,
                 stock_inicial, total_compras, total_ventas, stock_actual, nivel_stock, alerta_stock
             ) VALUES (
@@ -982,7 +1052,7 @@ def full_refresh_tables():
             "fact_ventas",
             "dim_fecha",
             "dim_cliente",
-            "dim_producto",
+            "dim_detalle_venta",
             "dim_usuario",
             "dim_sitio_web",
             "dim_canal",
@@ -1025,7 +1095,7 @@ def load_all_data(full_refresh_mode=False):
     load_order = [
         "dim_fecha",
         "dim_cliente",
-        "dim_producto",
+        "dim_detalle_venta",
         "dim_usuario",
         "dim_sitio_web",
         "dim_canal",
@@ -1081,7 +1151,7 @@ def create_indexes():
         # ndices en dimensiones principales
         "CREATE INDEX IF NOT EXISTS idx_dim_fecha_año_mes ON dim_fecha(año, mes)",
         "CREATE INDEX IF NOT EXISTS idx_dim_cliente_nombre ON dim_cliente(nombre)",
-        "CREATE INDEX IF NOT EXISTS idx_dim_producto_sku ON dim_producto(sku)",
+        "CREATE INDEX IF NOT EXISTS idx_dim_detalle_venta_sku ON dim_detalle_venta(sku)",
         "CREATE INDEX IF NOT EXISTS idx_dim_orden_fecha ON dim_orden(fecha_orden)",
         # ndices compuestos para consultas frecuentes
         "CREATE INDEX IF NOT EXISTS idx_fact_ventas_fecha_cliente ON fact_ventas(id_fecha, id_cliente)",
@@ -1116,12 +1186,12 @@ def verify_data_integrity():
         cur.execute("SELECT COUNT(*) FROM dim_cliente")
         client_count = cur.fetchone()[0]
 
-        cur.execute("SELECT COUNT(*) FROM dim_producto")
+        cur.execute("SELECT COUNT(*) FROM dim_detalle_venta")
         product_count = cur.fetchone()[0]
 
         print(f"    fact_ventas: {fact_count:,} registros")
         print(f"    dim_cliente: {client_count:,} registros")
-        print(f"    dim_producto: {product_count:,} registros")
+        print(f"    dim_detalle_venta: {product_count:,} registros")
 
         # Verificar FKs principales
         cur.execute(
