@@ -288,6 +288,38 @@ ORDER BY utilidad DESC;
 
 ---
 
+
+## 📋 Estructura Detallada de Tablas del Data Warehouse
+
+Esta sección documenta la estructura completa de cada dimensión y tabla de hechos, incluyendo todos los campos, propósito y lógica de negocio.
+
+### 📊 MÓDULO VENTAS - 13 Dimensiones + 1 Fact
+
+Documentación completa de las 13 dimensiones: dim_cliente, dim_producto, dim_usuario, dim_sitio_web, dim_canal, dim_direccion, dim_envio, dim_pago, dim_estado_orden, dim_impuestos, dim_promocion, dim_orden, dim_line_item + fact_ventas.
+
+**Ver documentación detallada en:** [docs/CATALOGO_ESTADOS_VENTAS.md](docs/CATALOGO_ESTADOS_VENTAS.md)
+
+---
+
+### 📦 MÓDULO INVENTARIO - 3 Dimensiones + 1 Fact
+
+#### dim_proveedor, dim_almacen, dim_movimiento_tipo + fact_inventario
+
+**3 dimensiones conformadas compartidas:** dim_producto 🔗, dim_usuario 🔗, dim_fecha 🔗
+
+Gestión completa de movimientos de inventario (entradas, salidas, ajustes, traslados), proveedores y almacenes.
+
+---
+
+### 💰 MÓDULO FINANZAS - 3 Dimensiones + 3 Facts
+
+#### dim_cuenta_contable, dim_centro_costo, dim_tipo_transaccion + fact_transacciones_contables, fact_estado_resultados, fact_balance_general
+
+**2 dimensiones conformadas compartidas:** dim_usuario 🔗, dim_fecha 🔗
+
+Contabilidad completa con plan de cuentas jerárquico, centros de costo y estados financieros automatizados.
+
+---
 ## 🚀 Inicio Rápido
 
 ### ⚙️ Requisitos del Sistema
