@@ -823,6 +823,293 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 
 ---
 
+## 🎯 Diagramas del Modelo Dimensional (Estrella)
+
+Esta sección muestra los modelos dimensionales (esquema estrella) de cada módulo, con las tablas de hechos en el centro y sus dimensiones relacionadas.
+
+---
+
+### 🛒 MÓDULO VENTAS - Modelo Dimensional
+
+**Esquema Estrella:** fact_ventas rodeada de 13 dimensiones + 2 dimensiones desnormalizadas
+
+```
+                           ┌─────────────────┐
+                           │   dim_fecha     │
+                           │  (CONFORMADA)   │
+                           └────────┬────────┘
+                                    │
+                                    │ 1:N
+┌──────────────┐                    │                    ┌──────────────┐
+│  dim_cliente │                    │                    │ dim_producto │
+│              │                    │                    │ (CONFORMADA) │
+└──────┬───────┘                    │                    └──────┬───────┘
+       │                            │                           │
+       │ 1:N                        │                    1:N    │
+       │                            │                           │
+       │        ┌────────────────┐  │  ┌────────────────┐       │
+       │        │  dim_usuario   │  │  │ dim_sitio_web  │       │
+       │        │  (CONFORMADA)  │  │  │                │       │
+       │        └────────┬───────┘  │  └────────┬───────┘       │
+       │                 │          │           │               │
+       │                 │ 1:N      │      1:N  │               │
+       │                 │          │           │               │
+┌──────┴─────────────────┴──────────┴───────────┴───────────────┴──────┐
+│                                                                       │
+│                          FACT_VENTAS                                 │
+│                     (Tabla de Hechos Central)                        │
+│                                                                       │
+│  Granularidad: 1 producto por orden                                 │
+│                                                                       │
+│  MEDIDAS CLAVE:                                                      │
+│  • cantidad                    NUMERIC(10,2)                         │
+│  • precio_unitario             NUMERIC(10,2)                         │
+│  • total_linea                 NUMERIC(15,2)                         │
+│  • subtotal_orden              NUMERIC(15,2)                         │
+│  • total_orden                 NUMERIC(15,2)                         │
+│  • descuento_promocion         NUMERIC(15,2)                         │
+│  • stock_actual                NUMERIC(10,2)                         │
+│  • stock_inicial               NUMERIC(10,2)                         │
+│  • stock_restante              NUMERIC(10,2)                         │
+│  • total_linea_neto            NUMERIC(15,2)                         │
+│                                                                       │
+│  DIMENSIONES (13 FKs):                                               │
+│  id_cliente → dim_cliente                                            │
+│  id_producto → dim_producto                                          │
+│  id_usuario → dim_usuario                                            │
+│  id_sitio_web → dim_sitio_web                                        │
+│  id_fecha → dim_fecha                                                │
+│  id_promocion → dim_promocion                                        │
+│  id_canal → dim_canal                                                │
+│  id_direccion → dim_direccion                                        │
+│  id_envio → dim_envio                                                │
+│  id_impuestos → dim_impuestos                                        │
+│  id_pago → dim_pago                                                  │
+│  id_order → dim_orden (desnormalizada)                               │
+│  id_line_item → dim_line_item (desnormalizada)                       │
+│                                                                       │
+└───────┬──────────┬──────────┬──────────┬──────────┬─────────┬────────┘
+        │          │          │          │          │         │
+   1:N  │     1:N  │     1:N  │     1:N  │     1:N  │    1:N  │    1:N
+        │          │          │          │          │         │
+        ↓          ↓          ↓          ↓          ↓         ↓
+┌───────────┐ ┌─────────┐ ┌──────────┐ ┌─────────┐ ┌────────────┐ ┌──────────┐
+│ dim_canal │ │dim_envio│ │ dim_pago │ │dim_impto│ │dim_promoc. │ │dim_direc.│
+└───────────┘ └─────────┘ └──────────┘ └─────────┘ └────────────┘ └──────────┘
+
+        ┌────────────────┐            ┌─────────────────┐
+        │  dim_orden     │            │ dim_line_item   │
+        │ (desnormaliz.) │            │ (desnormaliz.)  │
+        └────────────────┘            └─────────────────┘
+```
+
+**Características del Modelo de Ventas:**
+- ✅ **13 dimensiones** conectadas a la tabla de hechos
+- ✅ **10 medidas** para análisis de ventas y stock
+- ✅ **3 dimensiones conformadas** compartidas con otros módulos
+- ✅ **2 dimensiones desnormalizadas** (dim_orden, dim_line_item) para mejorar performance
+- ✅ Permite análisis por: cliente, producto, tiempo, canal, promoción, ubicación
+
+---
+
+### 📦 MÓDULO INVENTARIO - Modelo Dimensional
+
+**Esquema Estrella:** fact_inventario rodeada de 6 dimensiones (3 propias + 3 conformadas)
+
+```
+                           ┌─────────────────┐
+                           │   dim_fecha     │
+                           │  (CONFORMADA)   │
+                           └────────┬────────┘
+                                    │
+                                    │ 1:N
+┌──────────────┐                    │                    ┌──────────────┐
+│ dim_producto │                    │                    │ dim_almacen  │
+│ (CONFORMADA) │                    │                    │              │
+└──────┬───────┘                    │                    └──────┬───────┘
+       │                            │                           │
+       │ 1:N                        │                    1:N    │
+       │                            │                           │
+       │        ┌────────────────┐  │  ┌────────────────┐       │
+       │        │  dim_usuario   │  │  │ dim_proveedor  │       │
+       │        │  (CONFORMADA)  │  │  │                │       │
+       │        └────────┬───────┘  │  └────────┬───────┘       │
+       │                 │          │           │               │
+       │                 │ 1:N      │      1:N  │               │
+       │                 │          │           │               │
+┌──────┴─────────────────┴──────────┴───────────┴───────────────┴──────┐
+│                                                                       │
+│                       FACT_INVENTARIO                                │
+│                     (Tabla de Hechos Central)                        │
+│                                                                       │
+│  Granularidad: 1 movimiento de inventario                           │
+│                                                                       │
+│  MEDIDAS CLAVE:                                                      │
+│  • cantidad                    NUMERIC(10,2)                         │
+│  • costo_unitario              NUMERIC(10,2)                         │
+│  • costo_total                 NUMERIC(15,2)                         │
+│  • stock_anterior              NUMERIC(10,2)                         │
+│  • stock_resultante            NUMERIC(10,2)                         │
+│                                                                       │
+│  DIMENSIONES (6 FKs):                                                │
+│  id_producto → dim_producto (CONFORMADA)                             │
+│  id_almacen → dim_almacen                                            │
+│  id_proveedor → dim_proveedor (nullable)                             │
+│  id_tipo_movimiento → dim_movimiento_tipo                            │
+│  id_fecha → dim_fecha (CONFORMADA)                                   │
+│  id_usuario → dim_usuario (CONFORMADA, nullable)                     │
+│                                                                       │
+│  ATRIBUTOS ADICIONALES:                                              │
+│  • numero_documento (factura, guía)                                  │
+│  • motivo, observaciones                                             │
+│  • año, mes, dia (para particionamiento)                             │
+│                                                                       │
+└────────────────────────────┬──────────────────────────────────────────┘
+                             │
+                        1:N  │
+                             ↓
+                     ┌──────────────────┐
+                     │ dim_movimiento_  │
+                     │      tipo        │
+                     │                  │
+                     │ • Compra         │
+                     │ • Venta          │
+                     │ • Ajuste         │
+                     │ • Traslado       │
+                     │ • Merma          │
+                     └──────────────────┘
+```
+
+**Características del Modelo de Inventario:**
+- ✅ **6 dimensiones** conectadas (3 propias + 3 conformadas)
+- ✅ **5 medidas principales** para control de stock
+- ✅ **3 dimensiones conformadas** (producto, usuario, fecha)
+- ✅ Permite análisis por: producto, almacén, proveedor, tipo de movimiento, tiempo
+- ✅ **Trazabilidad completa** de movimientos con stock_anterior y stock_resultante
+
+---
+
+### 💰 MÓDULO FINANZAS - Modelo Dimensional
+
+**Esquema Constelación:** 3 tablas de hechos relacionadas (transacciones, estado resultados, balance)
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                   FACT_TRANSACCIONES_CONTABLES                      │
+│                   (Tabla de Hechos Transaccional)                   │
+│                                                                      │
+│  Granularidad: 1 asiento contable (debe o haber)                   │
+│                                                                      │
+│  MEDIDAS CLAVE:                                                     │
+│  • monto                       NUMERIC(15,2)                        │
+│  • tipo_movimiento             'debe' | 'haber'                     │
+│                                                                      │
+│  DIMENSIONES (5 FKs):                                               │
+│  id_fecha → dim_fecha (CONFORMADA)                                  │
+│  id_cuenta → dim_cuenta_contable                                    │
+│  id_centro_costo → dim_centro_costo (nullable)                      │
+│  id_tipo_transaccion → dim_tipo_transaccion                         │
+│  id_usuario → dim_usuario (CONFORMADA, nullable)                    │
+│                                                                      │
+│  REFERENCIAS CRUZADAS:                                              │
+│  • id_venta → fact_ventas                                           │
+│  • id_movimiento_inventario → fact_inventario                       │
+│                                                                      │
+└────┬──────────────┬──────────────┬──────────────┬───────────────────┘
+     │              │              │              │
+     │ 1:N          │ 1:N          │ 1:N          │ 1:N
+     │              │              │              │
+     ↓              ↓              ↓              ↓
+┌─────────┐  ┌──────────────┐  ┌─────────────┐  ┌────────────┐
+│dim_fecha│  │ dim_cuenta_  │  │dim_centro_  │  │ dim_tipo_  │
+│(CONFORM)│  │   contable   │  │    costo    │  │transaccion │
+└─────────┘  └──────┬───────┘  └─────────────┘  └────────────┘
+                    │
+                    │ Jerarquía
+                    │ Niveles 1-4
+                    ↓
+            ┌───────────────┐
+            │  Plan de      │
+            │  Cuentas      │
+            │               │
+            │ 1. Activo     │
+            │ 2. Pasivo     │
+            │ 3. Patrimonio │
+            │ 4. Ingresos   │
+            │ 5. Gastos     │
+            └───────────────┘
+
+        ↓ AGREGACIÓN MENSUAL ↓
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                    FACT_ESTADO_RESULTADOS                           │
+│                  (Tabla de Hechos Agregada - Mensual)               │
+│                                                                      │
+│  Granularidad: 1 cuenta contable por mes                           │
+│                                                                      │
+│  MEDIDAS CLAVE:                                                     │
+│  • monto_debe                  NUMERIC(15,2)                        │
+│  • monto_haber                 NUMERIC(15,2)                        │
+│  • saldo_neto                  NUMERIC(15,2)                        │
+│                                                                      │
+│  DIMENSIONES (2 FKs):                                               │
+│  id_cuenta → dim_cuenta_contable                                    │
+│  id_centro_costo → dim_centro_costo (nullable)                      │
+│                                                                      │
+│  ATRIBUTOS TEMPORALES:                                              │
+│  • año, mes                                                         │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+
+        ↓ AGREGACIÓN POR FECHA ↓
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                     FACT_BALANCE_GENERAL                            │
+│                 (Tabla de Hechos Agregada - Snapshot)               │
+│                                                                      │
+│  Granularidad: 1 cuenta contable por fecha                         │
+│                                                                      │
+│  MEDIDAS CLAVE:                                                     │
+│  • saldo                       NUMERIC(15,2)                        │
+│  • tipo_saldo                  'deudor' | 'acreedor'                │
+│                                                                      │
+│  DIMENSIONES (2 FKs):                                               │
+│  id_fecha → dim_fecha (CONFORMADA)                                  │
+│  id_cuenta → dim_cuenta_contable                                    │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Características del Modelo de Finanzas:**
+- ✅ **Esquema constelación** con 3 tablas de hechos relacionadas
+- ✅ **fact_transacciones_contables:** Nivel más detallado (transaccional)
+- ✅ **fact_estado_resultados:** Agregación mensual para P&L
+- ✅ **fact_balance_general:** Snapshot de saldos por fecha
+- ✅ **Jerarquía contable** en dim_cuenta_contable (4 niveles)
+- ✅ **2 dimensiones conformadas** (fecha, usuario)
+- ✅ **Referencias cruzadas** a fact_ventas y fact_inventario
+- ✅ Permite análisis por: cuenta contable, centro de costo, tipo transacción, tiempo
+
+---
+
+## 🔗 Dimensiones Conformadas (Compartidas)
+
+Las siguientes dimensiones son **conformadas**, es decir, compartidas entre múltiples módulos para garantizar consistencia y permitir análisis integrados:
+
+| Dimensión | Módulos que la Usan | Propósito |
+|-----------|---------------------|-----------|
+| **dim_fecha** | VENTAS + INVENTARIO + FINANZAS | Análisis temporal consistente |
+| **dim_producto** | VENTAS + INVENTARIO | Catálogo único de productos con KPIs |
+| **dim_usuario** | VENTAS + INVENTARIO + FINANZAS | Trazabilidad y responsables |
+
+**Beneficios de las Dimensiones Conformadas:**
+- ✅ Evita duplicación de datos
+- ✅ Garantiza consistencia entre módulos
+- ✅ Permite análisis cross-módulo (ej: ventas vs inventario por producto)
+- ✅ Simplifica el mantenimiento del DW
+
+---
+
 ## 🗄️ Diagramas de Base de Datos - OroCRM/OroCommerce
 
 Esta sección documenta la estructura de las bases de datos fuente (OroCRM y OroCommerce) y cómo se mapean a las dimensiones del Data Warehouse.
