@@ -1,0 +1,7 @@
+id_producto,id_almacen,id_proveedor,id_tipo_movimiento,fecha_movimiento,id_usuario,numero_documento,cantidad,costo_unitario,costo_total,stock_anterior,stock_resultante,motivo,observaciones
+1,ALM_CENTRAL,PROV001,MOV_ENTRADA,2024-01-15,1,COMP-2024-001,100,35.50,3550.00,0,100,Compra inicial de inventario,Primera compra del año
+1,TIENDA_01,,,MOV_TRASLADO_ENTRADA,2024-01-16,1,TRASL-001,30,35.50,1065.00,0,30,Traslado para surtir tienda,Desde almacén central
+1,TIENDA_01,,,MOV_SALIDA_VENTA,2024-01-20,2,,5,45.00,225.00,30,25,Venta regular,Venta del día
+2,ALM_CENTRAL,PROV002,MOV_ENTRADA,2024-01-18,1,COMP-2024-002,150,28.75,4312.50,0,150,Compra de calzado casual,Proveedor internacional
+2,TIENDA_02,,,MOV_TRASLADO_ENTRADA,2024-01-19,1,TRASL-002,40,28.75,1150.00,0,40,Traslado para surtir tienda,Desde almacén central
+2,TIENDA_02,,,MOV_SALIDA_VENTA,2024-01-22,3,,8,38.50,308.00,40,32,Venta regular,Cliente mayorista
