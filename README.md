@@ -291,33 +291,535 @@ ORDER BY utilidad DESC;
 
 ## 📋 Estructura Detallada de Tablas del Data Warehouse
 
-Esta sección documenta la estructura completa de cada dimensión y tabla de hechos, incluyendo todos los campos, propósito y lógica de negocio.
-
-### 📊 MÓDULO VENTAS - 13 Dimensiones + 1 Fact
-
-Documentación completa de las 13 dimensiones: dim_cliente, dim_producto, dim_usuario, dim_sitio_web, dim_canal, dim_direccion, dim_envio, dim_pago, dim_estado_orden, dim_impuestos, dim_promocion, dim_orden, dim_line_item + fact_ventas.
-
-**Ver documentación detallada en:** [docs/CATALOGO_ESTADOS_VENTAS.md](docs/CATALOGO_ESTADOS_VENTAS.md)
+Esta sección documenta la estructura completa de cada dimensión y tabla de hechos del Data Warehouse, incluyendo todos los campos, tipos de datos, claves primarias/foráneas y propósito.
 
 ---
 
-### 📦 MÓDULO INVENTARIO - 3 Dimensiones + 1 Fact
+## 🛒 MÓDULO VENTAS
 
-#### dim_proveedor, dim_almacen, dim_movimiento_tipo + fact_inventario
+### 📅 dim_fecha (CONFORMADA - Compartida entre los 3 módulos)
+**Módulo:** VENTAS | INVENTARIO | FINANZAS  
+**Origen:** CSV generado desde scripts/data/inputs/dim_fechas.csv  
+**Propósito:** Dimensión temporal para análisis históricos y tendencias
 
-**3 dimensiones conformadas compartidas:** dim_producto 🔗, dim_usuario 🔗, dim_fecha 🔗
-
-Gestión completa de movimientos de inventario (entradas, salidas, ajustes, traslados), proveedores y almacenes.
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_fecha | BIGINT | PK | ID en formato YYYYMMDD (ej: 20241216) |
+| fecha | DATE | - | Fecha completa |
+| año | INTEGER | - | Año (2024) |
+| mes | INTEGER | - | Mes (1-12) |
+| dia | INTEGER | - | Día del mes (1-31) |
+| dia_semana | INTEGER | - | Día de semana (1=Lun, 7=Dom) |
+| nombre_dia | VARCHAR(20) | - | Nombre del día (Lunes, Martes...) |
+| nombre_mes | VARCHAR(20) | - | Nombre del mes (Enero, Febrero...) |
+| trimestre | INTEGER | - | Trimestre (1-4) |
+| semana_año | INTEGER | - | Semana del año (1-52/53) |
+| es_fin_semana | BOOLEAN | - | True si es sábado/domingo |
+| es_feriado | BOOLEAN | - | True si es feriado nacional |
 
 ---
 
-### 💰 MÓDULO FINANZAS - 3 Dimensiones + 3 Facts
+### 👤 dim_cliente
+**Módulo:** VENTAS  
+**Origen:** oro_customer (OroCommerce)  
+**Propósito:** Clientes B2B con información organizacional
 
-#### dim_cuenta_contable, dim_centro_costo, dim_tipo_transaccion + fact_transacciones_contables, fact_estado_resultados, fact_balance_general
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_cliente | TEXT | PK | ID único del cliente |
+| nombre | TEXT | - | Razón social del cliente |
+| id_sitio_web | TEXT | - | Website asociado |
+| tipo_cliente | TEXT | - | B2B, B2C, Mayorista, etc. |
+| estado | TEXT | - | activo, inactivo, bloqueado |
+| fecha_registro | DATE | - | Fecha de creación del cliente |
 
-**2 dimensiones conformadas compartidas:** dim_usuario 🔗, dim_fecha 🔗
+---
 
-Contabilidad completa con plan de cuentas jerárquico, centros de costo y estados financieros automatizados.
+### 📦 dim_producto (CONFORMADA - Compartida entre Ventas e Inventario)
+**Módulo:** VENTAS | INVENTARIO  
+**Origen:** oro_product + métricas calculadas desde fact_ventas y fact_inventario  
+**Propósito:** Catálogo de productos enriquecido con KPIs de stock y rentabilidad
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_producto | TEXT | PK | ID único del producto |
+| sku | TEXT | - | Código SKU único |
+| nombre | TEXT | - | Nombre del producto |
+| descripcion | TEXT | - | Descripción detallada |
+| unidad_medida | TEXT | - | Unidad (pza, kg, litro, etc.) |
+| estado | TEXT | - | enabled, disabled |
+| fecha_creacion | DATE | - | Fecha de creación |
+| **stock_inicial** | INTEGER | - | Stock al inicio del período |
+| **total_compras** | INTEGER | - | Total unidades compradas |
+| **total_ventas** | INTEGER | - | Total unidades vendidas |
+| **stock_actual** | INTEGER | - | Stock disponible actual |
+| **nivel_stock** | TEXT | - | Sin Stock, Bajo, Óptimo, Alto |
+| **alerta_stock** | TEXT | - | Sin Datos, Normal, Crítico |
+| **rotacion_stock** | DECIMAL(10,2) | - | Índice de rotación |
+| **precio_compra_promedio** | DECIMAL(10,2) | - | Precio promedio de compra USD |
+| **precio_venta_promedio** | DECIMAL(10,2) | - | Precio promedio de venta USD |
+| **margen_unitario_usd** | DECIMAL(10,2) | - | Margen por unidad vendida |
+| **margen_porcentaje** | DECIMAL(5,1) | - | Margen en % |
+| **valor_stock_actual_usd** | DECIMAL(12,2) | - | Valor del stock actual |
+| **inversion_total_usd** | DECIMAL(12,2) | - | Total invertido en compras |
+| **ingresos_totales_usd** | DECIMAL(12,2) | - | Total ingresos por ventas |
+| **roi_porcentaje** | DECIMAL(8,1) | - | Return on Investment % |
+| **fecha_ultimo_calculo** | TIMESTAMP | - | Timestamp del último cálculo |
+
+---
+
+### 👨‍💼 dim_usuario (CONFORMADA - Compartida entre los 3 módulos)
+**Módulo:** VENTAS | INVENTARIO | FINANZAS  
+**Origen:** oro_user (OroCommerce)  
+**Propósito:** Usuarios del sistema para auditoría y responsables
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_usuario | TEXT | PK | ID único del usuario |
+| username | TEXT | - | Nombre de usuario |
+| email | TEXT | - | Correo electrónico |
+| nombre | TEXT | - | Primer nombre |
+| apellido | TEXT | - | Apellido |
+| nombre_completo | TEXT | - | Nombre completo concatenado |
+| estado | TEXT | - | activo, inactivo |
+| fecha_creacion | DATE | - | Fecha de creación |
+
+---
+
+### 🌐 dim_sitio_web
+**Módulo:** VENTAS  
+**Origen:** oro_website (OroCommerce)  
+**Propósito:** Websites/tiendas online donde se generan las ventas
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_sitio_web | TEXT | PK | ID único del sitio web |
+| nombre | TEXT | - | Nombre del sitio |
+| url | TEXT | - | URL del sitio web |
+| estado | TEXT | - | activo, inactivo |
+| fecha_creacion | DATE | - | Fecha de creación |
+
+---
+
+### 📡 dim_canal
+**Módulo:** VENTAS  
+**Origen:** orocrm_channel (OroCRM)  
+**Propósito:** Canales de venta (B2B, Magento, custom)
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_canal | TEXT | PK | ID único del canal |
+| nombre | TEXT | - | Nombre del canal |
+| tipo | TEXT | - | b2b, magento, custom |
+| estado | TEXT | - | activo, inactivo |
+
+---
+
+### 📍 dim_direccion
+**Módulo:** VENTAS  
+**Origen:** oro_address (OroCommerce)  
+**Propósito:** Direcciones de envío y facturación
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_direccion | TEXT | PK | ID único de dirección |
+| calle | TEXT | - | Dirección de calle |
+| ciudad | TEXT | - | Ciudad |
+| codigo_postal | TEXT | - | Código postal |
+| region | TEXT | - | Región/Estado |
+| pais_codigo | TEXT | - | Código ISO del país |
+| direccion_completa | TEXT | - | Dirección formateada completa |
+| estado | TEXT | - | activo, inactivo |
+
+---
+
+### 🚚 dim_envio
+**Módulo:** VENTAS  
+**Origen:** CSV maestro (data/inputs/ventas/metodos_envio.csv)  
+**Propósito:** Métodos de envío con costos y tiempos
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_envio | TEXT | PK | ID único del método de envío |
+| metodo_envio | TEXT | - | Standard, Express, Same Day, etc. |
+| tiempo_entrega | TEXT | - | 3-5 días, 24h, etc. |
+| costo | NUMERIC(10,2) | - | Costo del envío en USD |
+| estado | TEXT | - | activo, inactivo |
+
+---
+
+### 💳 dim_pago
+**Módulo:** VENTAS  
+**Origen:** CSV maestro (data/inputs/ventas/estados_pago.csv)  
+**Propósito:** Métodos y estados de pago
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_pago | TEXT | PK | ID único del método de pago |
+| metodo_pago | TEXT | - | Tarjeta, Transferencia, Efectivo |
+| estado_pago | TEXT | - | Pendiente, Autorizado, Pagado |
+| descripcion | TEXT | - | Descripción del estado |
+| requiere_validacion | BOOLEAN | - | Si requiere validación manual |
+| plazo_dias | INTEGER | - | Plazo de pago en días |
+
+---
+
+### 📋 dim_estado_orden
+**Módulo:** VENTAS  
+**Origen:** CSV maestro (data/inputs/ventas/estados_orden.csv)  
+**Propósito:** Estados del flujo de órdenes
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_estado_orden | TEXT | PK | ID único del estado |
+| codigo_estado | TEXT | - | pending, processing, shipped, etc. |
+| nombre_estado | TEXT | - | Nombre legible del estado |
+| descripcion | TEXT | - | Descripción detallada |
+| orden_flujo | INTEGER | - | Orden secuencial (1, 2, 3...) |
+| es_estado_final | BOOLEAN | - | True si es estado terminal |
+| permite_modificacion | BOOLEAN | - | Si permite editar la orden |
+
+---
+
+### 💰 dim_impuestos
+**Módulo:** VENTAS  
+**Origen:** oro_tax (OroCommerce)  
+**Propósito:** Configuración de impuestos y tasas
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_impuestos | TEXT | PK | ID único del impuesto |
+| codigo_impuesto | TEXT | - | IVA, ISR, etc. |
+| descripcion | TEXT | - | Descripción del impuesto |
+| tasa | NUMERIC(5,4) | - | Tasa decimal (ej: 0.16 = 16%) |
+| estado | TEXT | - | activo, inactivo |
+
+---
+
+### 🎁 dim_promocion
+**Módulo:** VENTAS  
+**Origen:** oro_promotion (OroCommerce)  
+**Propósito:** Promociones y descuentos aplicados
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_promocion | TEXT | PK | ID único de promoción |
+| nombre_promocion | TEXT | - | Nombre de la promoción |
+| descripcion | TEXT | - | Descripción de la oferta |
+| descuento_monto | NUMERIC(10,2) | - | Monto del descuento |
+| tipo_descuento | TEXT | - | porcentaje, monto_fijo |
+| estado | TEXT | - | activo, inactivo, expirado |
+
+---
+
+### 📄 dim_orden
+**Módulo:** VENTAS  
+**Origen:** oro_order (OroCommerce) - Desnormalizada  
+**Propósito:** Órdenes de venta con información agregada
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_orden | TEXT | PK | ID único de la orden |
+| numero_orden | TEXT | - | Número de orden visible |
+| numero_po | TEXT | - | Purchase Order del cliente |
+| cliente_nombre | TEXT | - | Nombre del cliente |
+| usuario_nombre_completo | TEXT | - | Nombre del usuario responsable |
+| sitio_web_nombre | TEXT | - | Nombre del website |
+| subtotal | NUMERIC(15,2) | - | Subtotal sin impuestos |
+| total | NUMERIC(15,2) | - | Total incluyendo todo |
+| moneda | TEXT | - | USD, EUR, etc. |
+| fecha_orden | DATE | - | Fecha de creación |
+| fecha_actualizacion | DATE | - | Última actualización |
+| categoria_orden | TEXT | - | Retail, Wholesale, etc. |
+
+---
+
+### 📝 dim_line_item
+**Módulo:** VENTAS  
+**Origen:** oro_order_line_item + oro_inventory_level  
+**Propósito:** Líneas de pedido individuales con stock
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_line_item | TEXT | PK | ID único del line item |
+| id_orden | TEXT | - | ID de la orden padre |
+| id_producto | TEXT | - | ID del producto |
+| producto_sku | TEXT | - | SKU del producto |
+| producto_nombre | TEXT | - | Nombre del producto |
+| cantidad | NUMERIC(10,2) | - | Cantidad solicitada |
+| precio_unitario | NUMERIC(10,2) | - | Precio unitario |
+| total_linea | NUMERIC(15,2) | - | Total de la línea |
+| moneda | TEXT | - | USD, EUR, etc. |
+| unidad | TEXT | - | Unidad de medida |
+| stock_actual | NUMERIC(10,2) | - | Stock al momento de la venta |
+| stock_disponible | NUMERIC(10,2) | - | Stock disponible para venta |
+| stock_despues_venta | NUMERIC(10,2) | - | Stock resultante post-venta |
+| estado_stock | TEXT | - | Suficiente, Insuficiente, etc. |
+
+---
+
+### 📊 fact_ventas (TABLA DE HECHOS)
+**Módulo:** VENTAS  
+**Granularidad:** 1 fila por cada producto en una orden  
+**Origen:** Combinación de oro_order + oro_order_line_item + 13 dimensiones  
+**Propósito:** Registro detallado de todas las ventas con métricas clave
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_venta | SERIAL | PK | ID autoincremental de la venta |
+| id_line_item | TEXT | FK | → dim_line_item |
+| id_order | TEXT | FK | → dim_orden |
+| id_cliente | TEXT | FK | → dim_cliente |
+| id_producto | TEXT | FK | → dim_producto |
+| id_usuario | TEXT | FK | → dim_usuario |
+| id_sitio_web | TEXT | FK | → dim_sitio_web |
+| id_fecha | BIGINT | FK | → dim_fecha |
+| id_promocion | TEXT | FK | → dim_promocion |
+| id_canal | TEXT | FK | → dim_canal |
+| id_direccion | TEXT | FK | → dim_direccion |
+| id_envio | TEXT | FK | → dim_envio |
+| id_impuestos | TEXT | FK | → dim_impuestos |
+| id_pago | TEXT | FK | → dim_pago |
+| id_status_pago | TEXT | - | Estado de pago en ese momento |
+| id_metodo_pago | TEXT | - | Método de pago utilizado |
+| **cantidad** | NUMERIC(10,2) | **MEDIDA** | Cantidad vendida |
+| **precio_unitario** | NUMERIC(10,2) | **MEDIDA** | Precio por unidad |
+| **total_linea** | NUMERIC(15,2) | **MEDIDA** | Total de la línea (cantidad × precio) |
+| **subtotal_orden** | NUMERIC(15,2) | **MEDIDA** | Subtotal de toda la orden |
+| **total_orden** | NUMERIC(15,2) | **MEDIDA** | Total de toda la orden |
+| **descuento_promocion** | NUMERIC(15,2) | **MEDIDA** | Descuento aplicado |
+| **fecha_venta** | TIMESTAMP | - | Timestamp exacto de la venta |
+| moneda | TEXT | - | Moneda de la transacción |
+| numero_po | TEXT | - | Purchase Order |
+| numero_orden | TEXT | - | Número de orden |
+| **stock_actual** | NUMERIC(10,2) | **MEDIDA** | Stock al momento de venta |
+| **stock_inicial** | NUMERIC(10,2) | **MEDIDA** | Stock antes de venta |
+| **stock_restante** | NUMERIC(10,2) | **MEDIDA** | Stock después de venta |
+| **total_linea_neto** | NUMERIC(15,2) | **MEDIDA** | Total neto (sin descuentos) |
+
+**Constraint Único:** (id_line_item, id_order)
+
+---
+
+## 📦 MÓDULO INVENTARIO
+
+### 🏢 dim_proveedor
+**Módulo:** INVENTARIO  
+**Origen:** CSV maestro (data/inputs/inventario/proveedores.csv)  
+**Propósito:** Proveedores de productos con datos comerciales
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_proveedor | TEXT | PK | ID único del proveedor |
+| nombre_proveedor | TEXT | - | Nombre comercial |
+| razon_social | TEXT | - | Razón social legal |
+| nit | TEXT | - | NIT o RUC |
+| pais_origen | TEXT | - | País de origen |
+| ciudad | TEXT | - | Ciudad |
+| direccion | TEXT | - | Dirección completa |
+| telefono | TEXT | - | Teléfono de contacto |
+| email | TEXT | - | Email de contacto |
+| contacto_principal | TEXT | - | Nombre del contacto |
+| dias_credito | INTEGER | - | Días de crédito otorgados |
+| tipo_proveedor | TEXT | - | Nacional, Internacional |
+| categoria_productos | TEXT | - | Categoría de productos |
+| activo | BOOLEAN | - | True si está activo |
+| fecha_registro | DATE | - | Fecha de alta |
+
+---
+
+### 🏭 dim_almacen
+**Módulo:** INVENTARIO  
+**Origen:** CSV maestro (data/inputs/inventario/almacenes.csv)  
+**Propósito:** Almacenes y centros de distribución
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_almacen | TEXT | PK | ID único del almacén |
+| nombre_almacen | TEXT | - | Nombre del almacén |
+| tipo_almacen | TEXT | - | Principal, Secundario, Tránsito |
+| ciudad | TEXT | - | Ciudad ubicación |
+| departamento | TEXT | - | Departamento/Estado |
+| direccion | TEXT | - | Dirección completa |
+| capacidad_m3 | NUMERIC(10,2) | - | Capacidad en metros cúbicos |
+| encargado | TEXT | - | Responsable del almacén |
+| telefono | TEXT | - | Teléfono de contacto |
+| activo | BOOLEAN | - | True si está activo |
+| fecha_apertura | DATE | - | Fecha de apertura |
+
+---
+
+### 🔄 dim_movimiento_tipo
+**Módulo:** INVENTARIO  
+**Origen:** CSV maestro (data/inputs/inventario/tipos_movimiento.csv)  
+**Propósito:** Tipos de movimientos de inventario
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_tipo_movimiento | TEXT | PK | ID único del tipo |
+| nombre_tipo | TEXT | - | Compra, Venta, Ajuste, Traslado |
+| categoria | TEXT | - | Entrada, Salida, Ajuste |
+| afecta_stock | TEXT | - | Incrementa, Decrementa, Neutral |
+| descripcion | TEXT | - | Descripción detallada |
+
+---
+
+### 📈 fact_inventario (TABLA DE HECHOS)
+**Módulo:** INVENTARIO  
+**Granularidad:** 1 fila por cada movimiento de inventario  
+**Origen:** Calculado desde fact_ventas + movimientos manuales  
+**Propósito:** Registro de todos los movimientos de stock
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_movimiento | SERIAL | PK | ID autoincremental del movimiento |
+| id_producto | TEXT | FK | → dim_producto |
+| id_almacen | TEXT | FK | → dim_almacen |
+| id_proveedor | TEXT | FK | → dim_proveedor (nullable) |
+| id_tipo_movimiento | TEXT | FK | → dim_movimiento_tipo |
+| id_fecha | BIGINT | FK | → dim_fecha |
+| id_usuario | TEXT | FK | → dim_usuario (nullable) |
+| numero_documento | TEXT | - | Número de documento (factura, guía) |
+| **cantidad** | NUMERIC(10,2) | **MEDIDA** | Cantidad movida (+ o -) |
+| **costo_unitario** | NUMERIC(10,2) | **MEDIDA** | Costo por unidad |
+| **costo_total** | NUMERIC(15,2) | **MEDIDA** | Costo total del movimiento |
+| **stock_anterior** | NUMERIC(10,2) | **MEDIDA** | Stock antes del movimiento |
+| **stock_resultante** | NUMERIC(10,2) | **MEDIDA** | Stock después del movimiento |
+| motivo | TEXT | - | Motivo del movimiento |
+| observaciones | TEXT | - | Observaciones adicionales |
+| año | INTEGER | - | Año del movimiento |
+| mes | INTEGER | - | Mes del movimiento |
+| dia | INTEGER | - | Día del movimiento |
+
+---
+
+## 💰 MÓDULO FINANZAS
+
+### 📊 dim_cuenta_contable
+**Módulo:** FINANZAS  
+**Origen:** CSV maestro (data/inputs/finanzas/cuentas_contables.csv)  
+**Propósito:** Plan de cuentas contable jerárquico
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_cuenta | TEXT | PK | Código de cuenta (1.1.01, 2.1.01) |
+| nombre_cuenta | TEXT | - | Nombre de la cuenta |
+| tipo_cuenta | TEXT | - | Activo, Pasivo, Patrimonio, etc. |
+| clasificacion | TEXT | - | Corriente, No Corriente |
+| cuenta_padre | TEXT | - | Cuenta padre en jerarquía |
+| nivel | INTEGER | - | Nivel en jerarquía (1, 2, 3, 4) |
+| naturaleza | TEXT | - | Deudora, Acreedora |
+| acepta_movimientos | BOOLEAN | - | True si acepta asientos |
+| estado_financiero | TEXT | - | Balance, Estado Resultados |
+| descripcion | TEXT | - | Descripción detallada |
+| activa | BOOLEAN | - | True si está activa |
+
+---
+
+### 🏢 dim_centro_costo
+**Módulo:** FINANZAS  
+**Origen:** CSV maestro (data/inputs/finanzas/centros_costo.csv)  
+**Propósito:** Centros de costo para asignación de gastos
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_centro_costo | TEXT | PK | ID único del centro |
+| nombre_centro | TEXT | - | Nombre del centro de costo |
+| tipo_centro | TEXT | - | Operativo, Administrativo, Ventas |
+| responsable | TEXT | - | Responsable del centro |
+| activo | BOOLEAN | - | True si está activo |
+
+---
+
+### 💼 dim_tipo_transaccion
+**Módulo:** FINANZAS  
+**Origen:** CSV maestro (data/inputs/finanzas/tipos_transaccion.csv)  
+**Propósito:** Clasificación de transacciones contables
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_tipo_transaccion | TEXT | PK | ID único del tipo |
+| nombre_tipo | TEXT | - | Venta, Compra, Ajuste, etc. |
+| categoria | TEXT | - | Ingreso, Egreso, Traspaso |
+| descripcion | TEXT | - | Descripción detallada |
+
+---
+
+### 📚 fact_transacciones_contables (TABLA DE HECHOS)
+**Módulo:** FINANZAS  
+**Granularidad:** 1 fila por cada asiento contable (debe o haber)  
+**Origen:** Generado automáticamente desde fact_ventas y fact_inventario  
+**Propósito:** Registro de todos los asientos contables
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_asiento | SERIAL | PK | ID autoincremental del asiento |
+| numero_asiento | TEXT | - | Número correlativo del asiento |
+| id_fecha | BIGINT | FK | → dim_fecha |
+| id_cuenta | TEXT | FK | → dim_cuenta_contable |
+| id_centro_costo | TEXT | FK | → dim_centro_costo (nullable) |
+| id_tipo_transaccion | TEXT | FK | → dim_tipo_transaccion |
+| id_usuario | TEXT | FK | → dim_usuario (nullable) |
+| tipo_movimiento | TEXT | - | 'debe' o 'haber' |
+| **monto** | NUMERIC(15,2) | **MEDIDA** | Monto del asiento |
+| documento_referencia | TEXT | - | Número de documento |
+| descripcion | TEXT | - | Descripción del asiento |
+| id_venta | TEXT | - | Referencia a fact_ventas |
+| id_movimiento_inventario | TEXT | - | Referencia a fact_inventario |
+| observaciones | TEXT | - | Observaciones adicionales |
+| año | INTEGER | - | Año contable |
+| mes | INTEGER | - | Mes contable |
+
+**Constraint:** tipo_movimiento IN ('debe', 'haber')
+
+---
+
+### 📊 fact_estado_resultados (TABLA DE HECHOS)
+**Módulo:** FINANZAS  
+**Granularidad:** 1 fila por cuenta contable por mes  
+**Origen:** Agregación de fact_transacciones_contables  
+**Propósito:** Estado de resultados mensual
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_resultado | SERIAL | PK | ID autoincremental |
+| año | INTEGER | - | Año del período |
+| mes | INTEGER | - | Mes del período |
+| id_cuenta | TEXT | FK | → dim_cuenta_contable |
+| id_centro_costo | TEXT | FK | → dim_centro_costo (nullable) |
+| **monto_debe** | NUMERIC(15,2) | **MEDIDA** | Total débitos del período |
+| **monto_haber** | NUMERIC(15,2) | **MEDIDA** | Total créditos del período |
+| **saldo_neto** | NUMERIC(15,2) | **MEDIDA** | Saldo neto (haber - debe) |
+
+---
+
+### 🏦 fact_balance_general (TABLA DE HECHOS)
+**Módulo:** FINANZAS  
+**Granularidad:** 1 fila por cuenta contable por fecha  
+**Origen:** Saldos acumulados desde fact_transacciones_contables  
+**Propósito:** Balance general al cierre de período
+
+| Campo | Tipo | Clave | Descripción |
+|-------|------|-------|-------------|
+| id_balance | SERIAL | PK | ID autoincremental |
+| id_fecha | BIGINT | FK | → dim_fecha |
+| id_cuenta | TEXT | FK | → dim_cuenta_contable |
+| **saldo** | NUMERIC(15,2) | **MEDIDA** | Saldo de la cuenta |
+| tipo_saldo | TEXT | - | 'deudor' o 'acreedor' |
+
+**Constraint:** tipo_saldo IN ('deudor', 'acreedor')
+
+---
+
+## 📊 Resumen de Tablas por Módulo
+
+| Módulo | Dimensiones | Facts | Total Tablas |
+|--------|-------------|-------|--------------|
+| **VENTAS** | 13 dims | 1 fact | 14 tablas |
+| **INVENTARIO** | 3 dims | 1 fact | 4 tablas |
+| **FINANZAS** | 3 dims | 3 facts | 6 tablas |
+| **CONFORMADAS** | 3 dims compartidas | - | - |
+| **TOTAL** | 19 dims + 3 conformadas | 5 facts | **24 tablas** |
 
 ---
 
