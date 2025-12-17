@@ -320,6 +320,367 @@ Gestión completa de movimientos de inventario (entradas, salidas, ajustes, tras
 Contabilidad completa con plan de cuentas jerárquico, centros de costo y estados financieros automatizados.
 
 ---
+
+## 🗄️ Diagramas de Base de Datos - OroCRM/OroCommerce
+
+Esta sección documenta la estructura de las bases de datos fuente (OroCRM y OroCommerce) y cómo se mapean a las dimensiones del Data Warehouse.
+
+### 📊 Diagrama ER - OroCommerce (Sistema Fuente)
+
+```
+┌─────────────────────────┐
+│    oro_organization     │
+│─────────────────────────│
+│ • id (PK)              │
+│   name                  │
+│   enabled               │
+└────────────┬────────────┘
+             │
+             │ 1:N
+             ↓
+┌─────────────────────────┐         ┌─────────────────────────┐
+│      oro_website        │         │      oro_customer       │
+│─────────────────────────│         │─────────────────────────│
+│ • id (PK)              │         │ • id (PK)              │
+│   name                  │←────────┤   organization_id (FK) │
+│   organization_id (FK)  │    1:N  │   parent_id (FK)       │
+│   url                   │         │   owner_id (FK)        │
+└────────────┬────────────┘         │   group_id (FK)        │
+             │                       │   name                 │
+             │ 1:N                   │   created_at           │
+             ↓                       │   lifetime             │
+┌─────────────────────────┐         └────────────┬───────────┘
+│       oro_order         │                      │
+│─────────────────────────│                      │ 1:N
+│ • id (PK)              │                      ↓
+│   organization_id (FK)  │←─────────────────────┘
+│   customer_id (FK)      │         1:N
+│   customer_user_id (FK) │
+│   website_id (FK)       │
+│   user_owner_id (FK)    │
+│   shipping_address_id   │
+│   billing_address_id    │
+│   identifier            │
+│   po_number             │
+│   created_at            │
+│   updated_at            │
+│   subtotal_value        │
+│   total_value           │
+│   currency              │
+│   shipping_method       │
+│   payment_term          │
+└────────────┬────────────┘
+             │
+             │ 1:N
+             ↓
+┌─────────────────────────┐
+│  oro_order_line_item    │
+│─────────────────────────│
+│ • id (PK)              │
+│   order_id (FK)         │
+│   product_id (FK)       │───────┐
+│   parent_product_id     │       │
+│   product_sku           │       │
+│   product_name          │       │
+│   quantity              │       │
+│   value                 │       │
+│   currency              │       │
+│   price_type            │       │
+│   ship_by               │       │
+│   comment               │       │
+└─────────────────────────┘       │
+                                  │ N:1
+                                  ↓
+┌─────────────────────────────────────────┐
+│            oro_product                  │
+│─────────────────────────────────────────│
+│ • id (PK)                              │
+│   organization_id (FK)                  │
+│   business_unit_owner_id (FK)           │
+│   primary_unit_precision_id (FK)        │
+│   brand_id (FK)                         │
+│   inventory_status_id (FK)              │
+│   attribute_family_id (FK)              │
+│   category_id (FK)                      │
+│   sku                                   │
+│   name                                  │
+│   status (enabled/disabled)             │
+│   type (simple/configurable)            │
+│   created_at                            │
+│   updated_at                            │
+│   is_featured                           │
+│   is_new_arrival                        │
+└────────────┬────────────────────────────┘
+             │
+             │ 1:N
+             ↓
+┌─────────────────────────┐
+│  oro_inventory_level    │
+│─────────────────────────│
+│ • id (PK)              │
+│   product_id (FK)       │
+│   warehouse_id (FK)     │
+│   quantity              │
+│   product_unit_code     │
+└─────────────────────────┘
+
+┌─────────────────────────┐
+│      oro_address        │
+│─────────────────────────│
+│ • id (PK)              │
+│   owner_id (FK)         │
+│   country_code          │
+│   region_code           │
+│   postal_code           │
+│   city                  │
+│   street                │
+│   organization          │
+│   label                 │
+└─────────────────────────┘
+
+┌─────────────────────────┐
+│        oro_user         │
+│─────────────────────────│
+│ • id (PK)              │
+│   organization_id (FK)  │
+│   username              │
+│   email                 │
+│   first_name            │
+│   last_name             │
+│   enabled               │
+│   created_at            │
+└─────────────────────────┘
+
+┌─────────────────────────┐
+│   oro_payment_status    │
+│─────────────────────────│
+│ • id (PK)              │
+│   order_id (FK)         │
+│   payment_status        │
+└─────────────────────────┘
+
+┌─────────────────────────┐
+│ oro_payment_transaction │
+│─────────────────────────│
+│ • id (PK)              │
+│   payment_method        │
+│   entity_class          │
+│   entity_identifier     │
+│   amount                │
+│   currency              │
+│   successful            │
+│   active                │
+│   transaction_date      │
+└─────────────────────────┘
+
+┌─────────────────────────┐
+│     oro_promotion       │
+│─────────────────────────│
+│ • id (PK)              │
+│   rule_id (FK)          │
+│   discount_value_type   │
+│   discount_value        │
+│   discount_currency     │
+│   items_discount_amount │
+└─────────────────────────┘
+```
+
+### 🔄 Mapeo: OroCommerce → Data Warehouse
+
+Esta tabla muestra cómo las tablas de OroCommerce se transforman en las dimensiones del DW:
+
+| Tabla Origen (OroCommerce) | Dimensión DW | Tipo | Transformación |
+|----------------------------|--------------|------|----------------|
+| **oro_customer** | dim_cliente | Directa | Extracción simple con limpieza de datos |
+| **oro_product** | dim_producto 🔗 | Conformada | Enriquecida con métricas de stock/ROI |
+| **oro_user** | dim_usuario 🔗 | Conformada | Compartida entre 3 módulos |
+| **oro_website** | dim_sitio_web | Directa | Extracción simple |
+| **orocrm_channel** | dim_canal | Directa | Clasificación de canales de venta |
+| **oro_address** | dim_direccion | Directa | Formato estandarizado de direcciones |
+| **CSV: metodos_envio** | dim_envio | CSV | Maestro desde archivo CSV |
+| **CSV: estados_pago** | dim_pago | CSV | Maestro desde archivo CSV |
+| **CSV: estados_orden** | dim_estado_orden | CSV | Flujo de estados desde CSV |
+| **oro_tax** | dim_impuestos | Directa | Configuración fiscal |
+| **oro_promotion** | dim_promocion | Directa | Promociones activas |
+| **oro_order** | dim_orden | Desnormalizada | Orden completa con datos agregados |
+| **oro_order_line_item** | dim_line_item | Directa | Líneas de pedido con stock |
+| **oro_order + oro_order_line_item** | fact_ventas | Fact | Granularidad: 1 producto por orden |
+| **CSV: proveedores** | dim_proveedor | CSV | Maestro desde CSV |
+| **CSV: almacenes** | dim_almacen | CSV | Maestro desde CSV |
+| **CSV: tipos_movimiento** | dim_movimiento_tipo | CSV | Clasificación de movimientos |
+| **Calculado en ETL** | fact_inventario | Fact | Movimientos calculados desde ventas |
+| **CSV: cuentas_contables** | dim_cuenta_contable | CSV | Plan de cuentas |
+| **CSV: centros_costo** | dim_centro_costo | CSV | Estructura organizacional |
+| **CSV: tipos_transaccion** | dim_tipo_transaccion | CSV | Tipos de asientos |
+| **Calculado en ETL** | fact_transacciones_contables | Fact | Asientos generados automáticamente |
+
+### 📈 Transformaciones ETL Principales
+
+#### 1️⃣ Enriquecimiento de dim_producto
+
+```sql
+-- Ejemplo: Agregar métricas de stock y rentabilidad
+SELECT 
+    p.id as id_producto,
+    p.sku,
+    p.name as nombre,
+    p.status as estado,
+    -- Métricas calculadas desde fact_inventario
+    COALESCE(SUM(CASE WHEN tm.categoria = 'Entrada' THEN fi.cantidad ELSE 0 END), 0) as total_compras,
+    COALESCE(SUM(CASE WHEN tm.categoria = 'Salida' THEN fi.cantidad ELSE 0 END), 0) as total_ventas,
+    -- Stock actual
+    MAX(fi.stock_resultante) as stock_actual,
+    -- ROI
+    ROUND(((SUM(fv.total_linea_neto) - SUM(fi.costo_total)) / NULLIF(SUM(fi.costo_total), 0)) * 100, 2) as roi_porcentaje
+FROM oro_product p
+LEFT JOIN fact_inventario fi ON fi.id_producto = p.id
+LEFT JOIN fact_ventas fv ON fv.id_producto = p.id
+GROUP BY p.id, p.sku, p.name, p.status;
+```
+
+#### 2️⃣ Construcción de fact_ventas desde múltiples tablas
+
+```sql
+-- fact_ventas combina 13 dimensiones
+SELECT 
+    oli.id as id_line_item,
+    o.id as id_order,
+    o.customer_id as id_cliente,
+    oli.product_id as id_producto,
+    o.user_owner_id as id_usuario,
+    o.website_id as id_sitio_web,
+    TO_CHAR(o.created_at, 'YYYYMMDD')::BIGINT as id_fecha,
+    -- ... 13 foreign keys totales
+    oli.quantity as cantidad,
+    oli.value as precio_unitario,
+    oli.quantity * oli.value as total_linea_neto
+FROM oro_order o
+JOIN oro_order_line_item oli ON oli.order_id = o.id
+WHERE o.created_at >= '2020-01-01';
+```
+
+#### 3️⃣ Generación de fact_inventario desde movimientos
+
+```sql
+-- fact_inventario se calcula desde ventas, compras y ajustes
+INSERT INTO fact_inventario (id_producto, id_almacen, id_tipo_movimiento, cantidad, stock_resultante)
+SELECT 
+    product_id,
+    warehouse_id,
+    'VENT-001' as id_tipo_movimiento,  -- Venta
+    -quantity as cantidad,  -- Negativo porque es salida
+    (SELECT stock_resultante FROM fact_inventario WHERE id_producto = product_id ORDER BY id_fecha DESC LIMIT 1) - quantity
+FROM oro_order_line_item
+WHERE ship_by >= '2024-01-01';
+```
+
+### 🔍 Relaciones Clave en OroCommerce
+
+**Modelo de Negocio:**
+
+1. **oro_organization** → Organización raíz (PuntaFina)
+2. **oro_website** → Canales web (tienda online)
+3. **oro_customer** → Clientes B2B/B2C
+4. **oro_order** → Órdenes de compra
+   - Cada orden pertenece a: 1 cliente, 1 website, 1 usuario
+   - Tiene: direcciones (envío/facturación), método de pago, método de envío
+5. **oro_order_line_item** → Productos dentro de cada orden
+   - Granularidad más fina para análisis
+   - Conecta orden con producto
+6. **oro_product** → Catálogo de productos
+   - Conectado a: categoría, marca, unidad de medida, inventario
+7. **oro_inventory_level** → Stock por almacén
+
+**Foreign Keys Críticas:**
+- `oro_order.customer_id` → `oro_customer.id`
+- `oro_order.website_id` → `oro_website.id`
+- `oro_order.user_owner_id` → `oro_user.id`
+- `oro_order_line_item.order_id` → `oro_order.id`
+- `oro_order_line_item.product_id` → `oro_product.id`
+- `oro_inventory_level.product_id` → `oro_product.id`
+
+### 📊 Flujo de Datos: OroCRM/OroCommerce → DW
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   SISTEMAS FUENTE                           │
+│                                                             │
+│  ┌──────────────┐              ┌──────────────┐           │
+│  │  OroCommerce │              │   OroCRM     │           │
+│  │  (PostgreSQL)│              │ (PostgreSQL) │           │
+│  └──────┬───────┘              └──────┬───────┘           │
+│         │                              │                    │
+│         │ 18 tablas                    │ 1 tabla           │
+└─────────┼──────────────────────────────┼───────────────────┘
+          │                              │
+          │ ETL Extraction               │
+          ↓                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│              ARCHIVOS CSV MAESTROS                          │
+│   (data/inputs/{ventas,inventario,finanzas}/)              │
+│                                                             │
+│   • metodos_envio.csv (8 registros)                        │
+│   • estados_pago.csv (12 registros)                        │
+│   • estados_orden.csv (16 registros)                       │
+│   • proveedores.csv (~10 registros)                        │
+│   • almacenes.csv (6 registros)                            │
+│   • tipos_movimiento.csv (9 registros)                     │
+│   • cuentas_contables.csv (~40 registros)                  │
+│   • centros_costo.csv (9 registros)                        │
+│   • tipos_transaccion.csv (9 registros)                    │
+│   • dim_fechas.csv (3,652 registros 2020-2030)             │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+                      │ ETL Transformation
+                      ↓
+┌─────────────────────────────────────────────────────────────┐
+│              DATA WAREHOUSE (PostgreSQL)                    │
+│                                                             │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  DIMENSIONES (20 tablas)                            │  │
+│  │  ─────────────────────────                           │  │
+│  │  • dim_fecha (conformada) 🔗                        │  │
+│  │  • dim_producto (conformada) 🔗                     │  │
+│  │  • dim_usuario (conformada) 🔗                      │  │
+│  │  • 17 dimensiones específicas por módulo            │  │
+│  └──────────────────────────────────────────────────────┘  │
+│                                                             │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  HECHOS (5 tablas)                                  │  │
+│  │  ─────────────────                                   │  │
+│  │  • fact_ventas (~30K registros)                     │  │
+│  │  • fact_inventario (~100K registros)                │  │
+│  │  • fact_transacciones_contables (~200K registros)   │  │
+│  │  • fact_estado_resultados (~1K registros)           │  │
+│  │  • fact_balance_general (~2K registros)             │  │
+│  └──────────────────────────────────────────────────────┘  │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+                      │ Analytics & BI
+                      ↓
+┌─────────────────────────────────────────────────────────────┐
+│                 CAPA DE ANÁLISIS                            │
+│                                                             │
+│   • Power BI Dashboards                                    │
+│   • SQL Ad-hoc Queries                                     │
+│   • Python Analytics (pandas)                              │
+│   • Reportes automatizados                                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 🎯 Beneficios del Modelo Dimensional
+
+| Aspecto | Sistema Fuente (OLTP) | Data Warehouse (OLAP) |
+|---------|----------------------|----------------------|
+| **Normalización** | Alta (3NF) - Muchas tablas pequeñas | Desnormalizada - Star Schema |
+| **Queries** | Simples pero con muchos JOINs | Optimizadas para agregaciones |
+| **Performance** | Optimizado para transacciones | Optimizado para análisis |
+| **Historicidad** | Solo estado actual | Historial completo |
+| **Complejidad** | 18+ tablas relacionadas | 20 dims + 5 facts claramente definidas |
+| **Usuarios** | Sistema operativo | Analistas de negocio |
+| **Ejemplo Query** | `SELECT * FROM oro_order WHERE id = 123` | `SELECT SUM(cantidad), producto FROM fact_ventas GROUP BY producto` |
+
+---
 ## 🚀 Inicio Rápido
 
 ### ⚙️ Requisitos del Sistema
