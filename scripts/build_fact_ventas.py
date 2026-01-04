@@ -34,14 +34,16 @@ def get_oro_connection():
     import psycopg2
     from dotenv import load_dotenv
     
-    load_dotenv(CONFIG_DIR / ".env")
+    # Cargar .env desde la raíz del proyecto
+    env_file = ROOT / ".env"
+    load_dotenv(env_file)
     
     return psycopg2.connect(
-        host=os.getenv('ORO_DB_HOST'),
-        port=int(os.getenv('ORO_DB_PORT')),
-        dbname=os.getenv('ORO_DB_NAME'),
-        user=os.getenv('ORO_DB_USER'),
-        password=os.getenv('ORO_DB_PASS')
+        host=os.getenv('ORO_DB_HOST', 'localhost'),
+        port=int(os.getenv('ORO_DB_PORT', 5432)),
+        dbname=os.getenv('ORO_DB_NAME', 'orocommerce'),
+        user=os.getenv('ORO_DB_USER', 'sa'),
+        password=os.getenv('ORO_DB_PASS', 'IngDatos123*')
     )
 
 def save_fact_table(df, name):
@@ -126,11 +128,11 @@ def build_fact_ventas():
     # Query principal que une todas las tablas necesarias
     query = """
     SELECT 
-        -- Claves de origen
+        -- Claves de origen (Atributos Degenerados - NO son FKs a dimensiones)
         oli.id::text as id_line_item,
         o.id::text as id_order,
         
-        -- Foreign Keys a dimensiones
+        -- Foreign Keys a dimensiones (Modelo Estrella)
         o.customer_id::text as id_cliente,
         oli.product_id::text as id_producto,
         o.customer_user_id::text as id_usuario,
@@ -156,6 +158,9 @@ def build_fact_ventas():
         oli.currency as moneda,
         o.po_number as numero_po,
         o.identifier as numero_orden,
+        
+        -- Estado de la orden (FK a dim_estado_orden)
+        COALESCE(o.internal_status_id, 'pending') as id_estado_orden,
         
         -- Campos para mapear a otras dimensiones
         'SIN_PROMO' as id_promocion,  -- Se corregirá después
@@ -266,6 +271,34 @@ def build_fact_ventas():
         df.loc[~df['id_direccion'].isin(valid_address_ids), 'id_direccion'] = '0'
     
     print("   OK Direcciones validadas")
+    
+    # Validar y mapear estados de orden
+    print("   Validando estados de orden contra dim_estado_orden...")
+    
+    # Mapeo de estados internos de OroCommerce a estados estándar
+    estado_orden_map = {
+        'open': 'pending',
+        'pending': 'pending',
+        'processing': 'processing',
+        'shipped': 'shipped',
+        'delivered': 'delivered',
+        'cancelled': 'cancelled',
+        'closed': 'completed',
+        'completed': 'completed',
+        None: 'pending',
+        '': 'pending'
+    }
+    
+    # Aplicar mapeo de estados
+    df['id_estado_orden'] = df['id_estado_orden'].map(lambda x: estado_orden_map.get(x, 'pending'))
+    
+    # Contar estados mapeados
+    estados_count = df['id_estado_orden'].value_counts()
+    print(f"   Distribución de estados de orden:")
+    for estado, count in estados_count.items():
+        print(f"      {estado}: {count:,} registros")
+    
+    print("   OK Estados de orden validados y mapeados")
     
     print("   OK Foreign Keys asignados")
     

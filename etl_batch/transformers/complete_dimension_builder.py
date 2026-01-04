@@ -10,8 +10,12 @@ import os
 from datetime import datetime, timedelta
 from typing import Dict, Any
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+# ROOT del proyecto
+ROOT = Path(__file__).resolve().parent.parent.parent
 
 class CompleteDimensionBuilder:
     """Constructor completo de todas las dimensiones del DW"""
@@ -84,7 +88,7 @@ class CompleteDimensionBuilder:
             last_name as apellido,
             CONCAT(first_name, ' ', last_name) as nombre_completo,
             enabled as activo,
-            created_at
+            createdat as created_at
         FROM oro_user
         WHERE enabled = true
         ORDER BY id
@@ -132,7 +136,7 @@ class CompleteDimensionBuilder:
         SELECT 
             id as cliente_externo_id,
             name as nombre,
-            website_id as sitio_web_id,
+            1 as sitio_web_id,
             created_at as fecha_registro
         FROM oro_customer
         ORDER BY id
@@ -209,8 +213,8 @@ class CompleteDimensionBuilder:
             city as ciudad,
             postal_code as codigo_postal,
             region_text as region,
-            country_iso2 as pais_codigo,
-            CONCAT_WS(', ', street, city, region_text, country_iso2) as direccion_completa
+            country_code as pais_codigo,
+            CONCAT_WS(', ', street, city, region_text, country_code) as direccion_completa
         FROM oro_order_address
         WHERE street IS NOT NULL
         ORDER BY id
@@ -223,7 +227,7 @@ class CompleteDimensionBuilder:
         return df
     
     def build_dim_orden(self) -> pd.DataFrame:
-        """Construir dim_orden desde oro_order"""
+        """Construir dim_orden (lookup table para atributos degenerados)"""
         logger.info("📋 Construyendo dim_orden...")
         
         query = """
@@ -242,10 +246,11 @@ class CompleteDimensionBuilder:
         df['tasa_cambio'] = 1.0
         
         logger.info(f"✓ dim_orden: {len(df):,} registros desde oro_order")
+        logger.info("  NOTA: Campos 'subtotal' y 'total' eliminados - calculables desde fact_ventas")
         return df
     
     def build_dim_line_item(self) -> pd.DataFrame:
-        """Construir dim_line_item desde oro_order_line_item"""
+        """Construir dim_line_item (lookup table para atributos degenerados)"""
         logger.info("📝 Construyendo dim_line_item...")
         
         query = """
@@ -263,6 +268,7 @@ class CompleteDimensionBuilder:
         df['tipo_linea'] = 'Producto'
         
         logger.info(f"✓ dim_line_item: {len(df):,} registros desde oro_order_line_item")
+        logger.info("  NOTA: Campo 'total_linea' eliminado - calculable como cantidad * precio_unitario")
         return df
     
     # ==================== DIMENSIONES DESDE CSV ====================
@@ -271,39 +277,63 @@ class CompleteDimensionBuilder:
         """Construir dim_envio desde CSV"""
         logger.info("🚚 Construyendo dim_envio desde CSV...")
         
-        csv_path = '../data/inputs/ventas/metodos_envio.csv'
+        csv_path = ROOT / 'data' / 'inputs' / 'ventas' / 'metodos_envio.csv'
         df = pd.read_csv(csv_path)
-        df = df.rename(columns={'id': 'envio_externo_id'})
-        df['metodo_envio'] = df['nombre']
-        df['tiempo_entrega'] = df['tiempo_entrega_dias'].astype(str) + ' días'
-        df['costo'] = df['costo_base']
+        
+        # Extraer ID numérico de ENV001 -> 1
+        df['envio_externo_id'] = df['id_envio'].str.extract(r'(\d+)').astype(int)
+        
+        # Mapeo de columnas a estructura de tabla
+        df = df.rename(columns={
+            'metodo_envio': 'metodo_envio',
+            'costo': 'costo_envio'
+        })
+        
+        # Extraer días numéricos del tiempo_entrega
+        df['tiempo_estimado_dias'] = df['tiempo_entrega'].str.extract(r'(\d+)').fillna(1).astype(int)
+        
+        # Transportista genérico
+        df['transportista'] = 'PuntaFina Logistics'
         
         logger.info(f"✓ dim_envio: {len(df):,} registros desde CSV")
-        return df
+        return df[['envio_externo_id', 'metodo_envio', 'transportista', 'costo_envio', 'tiempo_estimado_dias']]
     
     def build_dim_estado_orden(self) -> pd.DataFrame:
         """Construir dim_estado_orden desde CSV"""
         logger.info("📊 Construyendo dim_estado_orden desde CSV...")
         
-        csv_path = '../data/inputs/ventas/estados_orden.csv'
+        csv_path = ROOT / 'data' / 'inputs' / 'ventas' / 'estados_orden.csv'
         df = pd.read_csv(csv_path)
-        df = df.rename(columns={'id': 'estado_orden_externo_id'})
-        df['codigo'] = df['id']
+        df = df.rename(columns={
+            'id_estado_orden': 'estado_orden_externo_id',
+            'codigo_estado': 'codigo',
+            'nombre_estado': 'nombre',
+            'descripcion': 'descripcion'
+        })
         
         logger.info(f"✓ dim_estado_orden: {len(df):,} registros desde CSV")
-        return df
+        return df[['estado_orden_externo_id', 'codigo', 'nombre', 'descripcion']]
     
     def build_dim_estado_pago(self) -> pd.DataFrame:
         """Construir dim_estado_pago desde CSV"""
         logger.info("💳 Construyendo dim_estado_pago desde CSV...")
         
-        csv_path = '../data/inputs/ventas/estados_pago.csv'
+        csv_path = ROOT / 'data' / 'inputs' / 'ventas' / 'estados_pago.csv'
         df = pd.read_csv(csv_path)
-        df = df.rename(columns={'id': 'estado_pago_externo_id'})
-        df['codigo'] = df['id']
+        
+        # Mapeo correcto: estado_pago es el código, metodo_pago es el nombre
+        df = df.rename(columns={
+            'estado_pago': 'codigo',
+            'metodo_pago': 'nombre',
+            'descripcion': 'descripcion'
+        })
+        
+        # Eliminar duplicados por código (mantener primera ocurrencia)
+        df = df.drop_duplicates(subset=['codigo'], keep='first')
+        df['activo'] = True
         
         logger.info(f"✓ dim_estado_pago: {len(df):,} registros desde CSV")
-        return df
+        return df[['codigo', 'nombre', 'descripcion', 'activo']]
     
     def build_dim_pago(self) -> pd.DataFrame:
         """Construir dim_pago con métodos de pago comunes"""
@@ -373,7 +403,7 @@ class CompleteDimensionBuilder:
         """Construir dim_almacen desde CSV"""
         logger.info("🏪 Construyendo dim_almacen desde CSV...")
         
-        csv_path = '../data/inputs/inventario/almacenes.csv'
+        csv_path = ROOT / 'data' / 'inputs' / 'inventario' / 'almacenes.csv'
         df = pd.read_csv(csv_path)
         df['tipo'] = 'Almacén'
         
@@ -384,7 +414,7 @@ class CompleteDimensionBuilder:
         """Construir dim_proveedor desde CSV"""
         logger.info("🏭 Construyendo dim_proveedor desde CSV...")
         
-        csv_path = '../data/inputs/inventario/proveedores.csv'
+        csv_path = ROOT / 'data' / 'inputs' / 'inventario' / 'proveedores.csv'
         df = pd.read_csv(csv_path)
         
         logger.info(f"✓ dim_proveedor: {len(df):,} registros desde CSV")
@@ -394,7 +424,7 @@ class CompleteDimensionBuilder:
         """Construir dim_tipo_movimiento desde CSV"""
         logger.info("📦 Construyendo dim_tipo_movimiento desde CSV...")
         
-        csv_path = '../data/inputs/inventario/tipos_movimiento.csv'
+        csv_path = ROOT / 'data' / 'inputs' / 'inventario' / 'tipos_movimiento.csv'
         df = pd.read_csv(csv_path)
         
         logger.info(f"✓ dim_tipo_movimiento: {len(df):,} registros desde CSV")
@@ -428,8 +458,21 @@ class CompleteDimensionBuilder:
         """Construir dim_cuenta_contable desde CSV"""
         logger.info("💼 Construyendo dim_cuenta_contable desde CSV...")
         
-        csv_path = '../data/inputs/finanzas/cuentas_contables.csv'
+        csv_path = ROOT / 'data' / 'inputs' / 'finanzas' / 'cuentas_contables.csv'
         df = pd.read_csv(csv_path)
+        
+        # Mapear columnas CSV a esquema de DW
+        df = df.rename(columns={
+            'id_cuenta': 'codigo',
+            'nombre_cuenta': 'nombre',
+            'clasificacion': 'categoria',
+            'naturaleza': 'tipo',
+            'activa': 'activo'
+        })
+        
+        # Mantener solo columnas necesarias
+        df = df[['codigo', 'nombre', 'descripcion', 'tipo', 'categoria', 
+                 'nivel', 'cuenta_padre', 'activo']]
         
         logger.info(f"✓ dim_cuenta_contable: {len(df):,} registros desde CSV")
         return df
@@ -438,7 +481,7 @@ class CompleteDimensionBuilder:
         """Construir dim_centro_costo desde CSV"""
         logger.info("🏢 Construyendo dim_centro_costo desde CSV...")
         
-        csv_path = '../data/inputs/finanzas/centros_costo.csv'
+        csv_path = ROOT / 'data' / 'inputs' / 'finanzas' / 'centros_costo.csv'
         df = pd.read_csv(csv_path)
         
         logger.info(f"✓ dim_centro_costo: {len(df):,} registros desde CSV")
@@ -448,7 +491,7 @@ class CompleteDimensionBuilder:
         """Construir dim_tipo_transaccion desde CSV"""
         logger.info("📋 Construyendo dim_tipo_transaccion desde CSV...")
         
-        csv_path = '../data/inputs/finanzas/tipos_transaccion.csv'
+        csv_path = ROOT / 'data' / 'inputs' / 'finanzas' / 'tipos_transaccion.csv'
         df = pd.read_csv(csv_path)
         
         logger.info(f"✓ dim_tipo_transaccion: {len(df):,} registros desde CSV")

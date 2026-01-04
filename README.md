@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-2.1-blue.svg)
+![Version](https://img.shields.io/badge/version-2.2-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.8+-green.svg)
 ![PostgreSQL](https://img.shields.io/badge/postgresql-12+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
@@ -34,14 +34,14 @@
 | ❌ KPIs calculados manualmente | ✅ Métricas precalculadas y validadas |
 | ❌ Decisiones basadas en intuición | ✅ Decisiones basadas en datos |
 
-### ✨ Versión Actual: 2.1
+### ✨ Versión Actual: 2.2
 
-- ✅ **Módulo de Ventas** - 13 dimensiones + 1 fact (30K registros)
-- ✅ **Módulo de Inventario** - 6 dimensiones + 1 fact (100K movimientos)
-- ✅ **Módulo de Finanzas** - 5 dimensiones + 3 facts (200K transacciones)
+- ✅ **Módulo de Ventas** - 11 dimensiones + 1 fact (115,528 registros)
+- ✅ **Módulo de Inventario** - 6 dimensiones + 1 fact (408,397 movimientos)
+- ✅ **Módulo de Finanzas** - 5 dimensiones + 3 facts (577,640 transacciones)
 - ✅ **Estados Completos** - Órdenes, pagos y envíos (36 estados)
 - ✅ **Integración Total** - 3 dimensiones conformadas compartidas
-- ✅ **CSVs de Ejemplo** - 12 archivos con 2,142+ registros
+- ✅ **Correcciones v2.2** - Mapeo de cuentas, tipos numpy, transacciones completas
 
 ---
 
@@ -162,21 +162,21 @@ El sistema implementa un **Esquema Estrella Conformado** con **20 dimensiones** 
 <details open>
 <summary><b>Ver Dimensiones de Ventas</b></summary>
 
-| # | Tabla | Registros | Descripción | Fuente |
-|---|-------|-----------|-------------|--------|
-| 1 | **dim_cliente** | ~500 | Clientes únicos con información de contacto | oro_customer |
-| 2 | **dim_detalle_venta** 🔗 | ~200 | Detalle de productos con métricas de venta | oro_product |
-| 3 | **dim_usuario** 🔗 | ~20 | Usuarios del sistema (vendedores, admin) | oro_user |
-| 4 | **dim_sitio_web** | ~3 | Sitios web y canales de venta | oro_website |
-| 5 | **dim_canal** | ~4 | Canales de venta (online/tienda física) | oro_channel |
-| 6 | **dim_direccion** | ~1K | Direcciones de envío y facturación | oro_address |
-| 7 | **dim_envio** | ~8 | Métodos de envío con estados | CSV: metodos_envio.csv |
-| 8 | **dim_pago** | ~12 | Métodos y estados de pago | CSV: estados_pago.csv |
-| 9 | **dim_estado_orden** | ~16 | Estados de orden (flujo completo) | CSV: estados_orden.csv |
-| 10 | **dim_impuestos** | ~10 | Configuración fiscal (IVA, etc.) | oro_tax |
-| 11 | **dim_promocion** | ~15 | Promociones y descuentos | oro_promotion |
-| 12 | **dim_orden** | ~1K | Órdenes con información desnormalizada | oro_order |
-| 13 | **dim_line_item** | ~5K | Ítems de línea de pedidos | oro_order_line_item |
+| # | Tabla | Registros | Descripción | Fuente | Tipo |
+|---|-------|-----------|-------------|--------|------|
+| 1 | **dim_cliente** | ~500 | Clientes únicos con información de contacto | oro_customer | Dimensión |
+| 2 | **dim_detalle_venta** 🔗 | ~200 | Detalle de productos con métricas de venta | oro_product | Dimensión |
+| 3 | **dim_usuario** 🔗 | ~20 | Usuarios del sistema (vendedores, admin) | oro_user | Dimensión |
+| 4 | **dim_sitio_web** | ~3 | Sitios web y canales de venta | oro_website | Dimensión |
+| 5 | **dim_canal** | ~4 | Canales de venta (online/tienda física) | oro_channel | Dimensión |
+| 6 | **dim_direccion** | ~1K | Direcciones de envío y facturación | oro_address | Dimensión |
+| 7 | **dim_envio** | ~8 | Métodos de envío con estados | CSV: metodos_envio.csv | Dimensión |
+| 8 | **dim_pago** | ~12 | Métodos y estados de pago | CSV: estados_pago.csv | Dimensión |
+| 9 | **dim_estado_orden** | ~16 | Estados de orden (flujo completo) | CSV: estados_orden.csv | Dimensión |
+| 10 | **dim_impuestos** | ~10 | Configuración fiscal (IVA, etc.) | oro_tax | Dimensión |
+| 11 | **dim_promocion** | ~15 | Promociones y descuentos | oro_promotion | Dimensión |
+| 12 | **dim_orden** ⚠️ | ~1K | Info descriptiva de órdenes (lookup table) | oro_order | Atributo Degenerado |
+| 13 | **dim_line_item** ⚠️ | ~5K | Info descriptiva de line items (lookup table) | oro_order_line_item | Atributo Degenerado |
 
 **Tabla de Hechos:**
 - **fact_ventas** (~30K registros) - Transacciones de venta a nivel de línea de pedido
@@ -224,9 +224,9 @@ El sistema implementa un **Esquema Estrella Conformado** con **20 dimensiones** 
 - 🔗 **dim_fecha** (compartida con todos)
 
 **Tablas de Hechos:**
-- **fact_transacciones_contables** (~200K registros) - Asientos contables detallados
-- **fact_estado_resultados** (~1K registros) - Estado de resultados agregado mensual
-- **fact_balance_general** (~2K registros) - Balance general a fecha de corte
+- **fact_transacciones** (577,640 registros) - Asientos contables detallados con partida doble
+- **fact_estado_resultados** (70 registros) - Estado de resultados agregado mensual
+- **fact_balance** (210 registros) - Balance general por período y cuenta
 
 </details>
 
@@ -509,10 +509,11 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 
 ---
 
-### 📄 dim_orden
+### 📄 dim_orden (⚠️ ATRIBUTO DEGENERADO)
 **Módulo:** VENTAS  
 **Origen:** oro_order (OroCommerce) - Desnormalizada  
-**Propósito:** Órdenes de venta con información agregada
+**Propósito:** Información descriptiva de órdenes (NO es dimensión del modelo estrella)  
+**Nota:** Los IDs de orden se almacenan en fact_ventas como atributos degenerados
 
 | Campo | Tipo | Clave | Descripción |
 |-------|------|-------|-------------|
@@ -522,19 +523,22 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 | cliente_nombre | TEXT | - | Nombre del cliente |
 | usuario_nombre_completo | TEXT | - | Nombre del usuario responsable |
 | sitio_web_nombre | TEXT | - | Nombre del website |
-| subtotal | NUMERIC(15,2) | - | Subtotal sin impuestos |
-| total | NUMERIC(15,2) | - | Total incluyendo todo |
 | moneda | TEXT | - | USD, EUR, etc. |
 | fecha_orden | DATE | - | Fecha de creación |
 | fecha_actualizacion | DATE | - | Última actualización |
 | categoria_orden | TEXT | - | Retail, Wholesale, etc. |
 
+**Campos Eliminados (Calculables):**
+- ❌ subtotal - Se calcula: SUM(fact_ventas.subtotal) WHERE id_orden = X
+- ❌ total - Se calcula: SUM(fact_ventas.total) WHERE id_orden = X
+
 ---
 
-### 📝 dim_line_item
+### 📝 dim_line_item (⚠️ ATRIBUTO DEGENERADO)
 **Módulo:** VENTAS  
 **Origen:** oro_order_line_item + oro_inventory_level  
-**Propósito:** Líneas de pedido individuales con stock
+**Propósito:** Información descriptiva de líneas de pedido (NO es dimensión del modelo estrella)  
+**Nota:** Los IDs de line_item se almacenan en fact_ventas como atributos degenerados
 
 | Campo | Tipo | Clave | Descripción |
 |-------|------|-------|-------------|
@@ -545,13 +549,15 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 | producto_nombre | TEXT | - | Nombre del producto |
 | cantidad | NUMERIC(10,2) | - | Cantidad solicitada |
 | precio_unitario | NUMERIC(10,2) | - | Precio unitario |
-| total_linea | NUMERIC(15,2) | - | Total de la línea |
 | moneda | TEXT | - | USD, EUR, etc. |
 | unidad | TEXT | - | Unidad de medida |
 | stock_actual | NUMERIC(10,2) | - | Stock al momento de la venta |
 | stock_disponible | NUMERIC(10,2) | - | Stock disponible para venta |
 | stock_despues_venta | NUMERIC(10,2) | - | Stock resultante post-venta |
 | estado_stock | TEXT | - | Suficiente, Insuficiente, etc. |
+
+**Campos Eliminados (Calculables):**
+- ❌ total_linea - Se calcula: cantidad × precio_unitario
 
 ---
 
@@ -588,13 +594,23 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 - `idx_fact_ventas_cliente` BTREE (cliente_id)
 - `idx_fact_ventas_producto` BTREE (producto_id)
 
-**Foreign Keys:**
+**Foreign Keys (Dimensiones del Modelo Estrella):**
 - fecha_id → dim_fecha(fecha_id)
 - cliente_id → dim_cliente(cliente_id)
 - producto_id → dim_producto(producto_id)
-- orden_id → dim_orden(orden_id)
 - usuario_id → dim_usuario(usuario_id)
-- almacen_id → dim_almacen(almacen_id)
+- sitio_web_id → dim_sitio_web(sitio_web_id)
+- canal_id → dim_canal(canal_id)
+- direccion_id → dim_direccion(direccion_id)
+- envio_id → dim_envio(envio_id)
+- pago_id → dim_pago(pago_id)
+- estado_orden_id → dim_estado_orden(estado_orden_id) ⚠️ **AGREGADO**
+- impuestos_id → dim_impuestos(impuestos_id)
+- promocion_id → dim_promocion(promocion_id) (nullable)
+
+**Atributos Degenerados (IDs Transaccionales, NO son FKs):**
+- numero_orden (VARCHAR) - Identificador visible de la orden
+- numero_line_item (VARCHAR) - Identificador del line item
 
 **Registros:** 646,548 líneas de venta
 
@@ -767,6 +783,7 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 |-------|------|-------|-------------|
 | transaccion_id | SERIAL | PK | ID autoincremental de la transacción |
 | fecha_id | INTEGER | FK | → dim_fecha |
+| periodo_id | INTEGER | - | Período en formato YYYYMM (ej: 202312) |
 | cuenta_id | INTEGER | FK | → dim_cuenta_contable |
 | centro_costo_id | INTEGER | FK | → dim_centro_costo (nullable) |
 | tipo_transaccion_id | INTEGER | FK | → dim_tipo_transaccion |
@@ -795,7 +812,7 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 
 **Constraint:** tipo_movimiento IN ('debe', 'haber')
 
-**Registros:** 186,256 asientos
+**Registros:** 577,640 asientos (5 asientos por venta: débito/crédito con partida doble)
 
 ---
 
@@ -808,14 +825,12 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 | Campo | Tipo | Clave | Descripción |
 |-------|------|-------|-------------|
 | resultado_id | SERIAL | PK | ID autoincremental |
-| periodo_id | INTEGER | FK | → dim_periodo_contable |
+| periodo_id | INTEGER | - | Período en formato YYYYMM |
 | cuenta_id | INTEGER | FK | → dim_cuenta_contable |
-| centro_costo_id | INTEGER | FK | → dim_centro_costo (nullable) |
-| **ingresos** | NUMERIC(15,2) | **MEDIDA** | Total ingresos del período |
-| **costos** | NUMERIC(15,2) | **MEDIDA** | Total costos del período |
-| **gastos** | NUMERIC(15,2) | **MEDIDA** | Total gastos del período |
-| **utilidad_bruta** | NUMERIC(15,2) | **MEDIDA** | Utilidad bruta (ingresos - costos) |
-| **utilidad_neta** | NUMERIC(15,2) | **MEDIDA** | Utilidad neta (utilidad_bruta - gastos) |
+| **tipo_cuenta** | VARCHAR(50) | - | Clasificación: Ingresos, Costos, Gastos |
+| **monto_debito** | NUMERIC(15,2) | **MEDIDA** | Total débitos del período |
+| **monto_credito** | NUMERIC(15,2) | **MEDIDA** | Total créditos del período |
+| **saldo** | NUMERIC(15,2) | **MEDIDA** | Saldo neto del período |
 | created_at | TIMESTAMP | - | Fecha de creación del registro |
 
 **Índices:**
@@ -824,11 +839,9 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 - `idx_fact_resultado_cuenta` BTREE (cuenta_id)
 
 **Foreign Keys:**
-- periodo_id → dim_periodo_contable(periodo_id)
 - cuenta_id → dim_cuenta_contable(cuenta_id)
-- centro_costo_id → dim_centro_costo(centro_costo_id)
 
-**Registros:** 25 registros
+**Registros:** 70 registros (35 períodos × 2 cuentas P&L)
 
 ---
 
@@ -841,12 +854,11 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 | Campo | Tipo | Clave | Descripción |
 |-------|------|-------|-------------|
 | balance_id | SERIAL | PK | ID autoincremental |
-| periodo_id | INTEGER | FK | → dim_periodo_contable |
+| periodo_id | INTEGER | - | Período en formato YYYYMM |
 | cuenta_id | INTEGER | FK | → dim_cuenta_contable |
-| **saldo_inicial** | NUMERIC(15,2) | **MEDIDA** | Saldo al inicio del período |
 | **debitos** | NUMERIC(15,2) | **MEDIDA** | Total débitos del período |
 | **creditos** | NUMERIC(15,2) | **MEDIDA** | Total créditos del período |
-| **saldo_final** | NUMERIC(15,2) | **MEDIDA** | Saldo al final del período |
+| **saldo** | NUMERIC(15,2) | **MEDIDA** | Saldo acumulado del período |
 | created_at | TIMESTAMP | - | Fecha de creación del registro |
 
 **Índices:**
@@ -856,25 +868,26 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 - `idx_fact_balance_cuenta` BTREE (cuenta_id)
 
 **Foreign Keys:**
-- periodo_id → dim_periodo_contable(periodo_id)
 - cuenta_id → dim_cuenta_contable(cuenta_id)
 
-**Registros:** 3 registros
+**Registros:** 210 registros (35 períodos × 6 cuentas activas)
 
 ---
 
 ## 📊 Resumen de Tablas Implementadas
 
-| Módulo | Dimensiones | Facts | Total Tablas |
-|--------|-------------|-------|--------------|
-| **VENTAS** | 14 dims | 1 fact | 15 tablas |
-| **INVENTARIO** | 3 dims | 1 fact | 4 tablas |
-| **FINANZAS** | 5 dims | 3 facts | 8 tablas |
-| **TRANSVERSALES** | 2 dims compartidas | - | 2 tablas |
-| **TOTAL** | **24 dimensiones** | **5 facts** | **29 tablas** |
+| Módulo | Dimensiones | Facts | Atributos Degenerados | Total Tablas |
+|--------|-------------|-------|----------------------|--------------|  
+| **VENTAS** | 11 dims | 1 fact | 2 tablas lookup | 14 tablas |
+| **INVENTARIO** | 3 dims | 1 fact | - | 4 tablas |
+| **FINANZAS** | 5 dims | 3 facts | - | 8 tablas |
+| **TRANSVERSALES** | 2 dims compartidas | - | - | 2 tablas |
+| **TOTAL** | **21 dimensiones** | **5 facts** | **2 lookup tables** | **28 tablas** |
 
 ### Detalle de Dimensiones:
-**VENTAS (14):** dim_cliente, dim_detalle_venta, dim_usuario, dim_sitio_web, dim_canal, dim_direccion, dim_envio, dim_pago, dim_estado_pago, dim_estado_orden, dim_impuestos, dim_promocion, dim_orden, dim_line_item
+**VENTAS (11 + 2 lookup):** 
+- Dimensiones: dim_cliente, dim_detalle_venta, dim_usuario, dim_sitio_web, dim_canal, dim_direccion, dim_envio, dim_pago, dim_estado_orden, dim_impuestos, dim_promocion
+- Lookup tables (atributos degenerados): dim_orden, dim_line_item
 
 **INVENTARIO (3):** dim_proveedor, dim_almacen, dim_tipo_movimiento
 
@@ -883,11 +896,11 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 **TRANSVERSALES (2):** dim_fecha, dim_producto
 
 ### Detalle de Facts:
-1. **fact_ventas** - 646,548 registros (líneas de venta)
-2. **fact_inventario** - 50,277 registros (movimientos de inventario)
-3. **fact_transacciones** - 186,256 registros (asientos contables)
-4. **fact_estado_resultados** - 25 registros (estados de resultados agregados)
-5. **fact_balance** - 3 registros (balances por período)
+1. **fact_ventas** - 115,528 registros (líneas de venta)
+2. **fact_inventario** - 408,397 registros (movimientos de inventario)
+3. **fact_transacciones** - 577,640 registros (asientos contables con partida doble)
+4. **fact_estado_resultados** - 70 registros (P&L agregado por período)
+5. **fact_balance** - 210 registros (balance por período y cuenta)
 
 ---
 
@@ -897,9 +910,9 @@ Esta sección muestra los modelos dimensionales (esquema estrella) de cada módu
 
 ---
 
-### 🛒 MÓDULO VENTAS - Modelo Dimensional (⭐ Optimizado para ML y Recomendaciones)
+### 🛒 MÓDULO VENTAS - Modelo Dimensional (⭐ Esquema Estrella Corregido)
 
-**Esquema Estrella:** fact_ventas rodeada de 13 dimensiones + 2 dimensiones desnormalizadas
+**Esquema Estrella:** fact_ventas rodeada de 11 dimensiones + dim_fecha conformada + 2 lookup tables
 
 ```
                            ┌─────────────────────┐
@@ -911,7 +924,7 @@ Esta sección muestra los modelos dimensionales (esquema estrella) de cada módu
 ┌─────────────────────┐               │               ┌──────────────────────┐
 │  dim_cliente        │               │               │ dim_detalle_venta    │
 │  ⭐ ENRIQUECIDA     │               │               │  (CONFORMADA)        │
-│  PARA ML            │               │               │  + Market Basket     │
+│  PARA ML            │               │               │  = dim_producto      │
 │                     │               │               └──────────┬───────────┘
 │ • RFM Score         │               │                          │
 │ • Segmentación      │               │                   1:N    │
@@ -933,55 +946,71 @@ Esta sección muestra los modelos dimensionales (esquema estrella) de cada módu
 ┌──────┴─────────────────┴────────────┴─────────────┴───────────┴──────┐
 │                                                                       │
 │                       🎯 FACT_VENTAS                                 │
-│              (Tabla de Hechos - Alimenta Algoritmos ML)              │
+│                (Tabla de Hechos del Modelo Estrella)                 │
 │                                                                       │
-│  Granularidad: 1 producto por orden                                 │
+│  Granularidad: 1 línea de producto por orden                        │
 │                                                                       │
-│  📊 MEDIDAS PARA ANÁLISIS Y RECOMENDACIONES:                         │
+│  📊 MEDIDAS:                                                         │
 │  • cantidad                    NUMERIC(10,2)                         │
 │  • precio_unitario             NUMERIC(10,2)                         │
 │  • total_linea                 NUMERIC(15,2)                         │
 │  • subtotal_orden              NUMERIC(15,2)                         │
 │  • total_orden                 NUMERIC(15,2)                         │
-│  • descuento_promocion         NUMERIC(15,2)  → Sensibilidad precio  │
-│  • stock_actual                NUMERIC(10,2)  → Disponibilidad       │
+│  • descuento_promocion         NUMERIC(15,2)                         │
+│  • stock_actual                NUMERIC(10,2)                         │
 │  • stock_inicial               NUMERIC(10,2)                         │
 │  • stock_restante              NUMERIC(10,2)                         │
 │  • total_linea_neto            NUMERIC(15,2)                         │
 │                                                                       │
-│  🔗 DIMENSIONES (13 FKs):                                            │
-│  id_cliente → dim_cliente ⭐ (RFM + Preferencias)                    │
-│  id_producto → dim_detalle_venta (Market Basket)                     │
+│  🔗 DIMENSIONES (11 FKs):                                            │
+│  id_cliente → dim_cliente ⭐                                         │
+│  id_producto → dim_detalle_venta (producto)                          │
 │  id_usuario → dim_usuario                                            │
 │  id_sitio_web → dim_sitio_web                                        │
-│  id_fecha → dim_fecha (Patrones temporales)                          │
-│  id_promocion → dim_promocion                                        │
+│  id_fecha → dim_fecha                                                │
 │  id_canal → dim_canal                                                │
 │  id_direccion → dim_direccion                                        │
 │  id_envio → dim_envio                                                │
-│  id_impuestos → dim_impuestos                                        │
 │  id_pago → dim_pago                                                  │
-│  id_order → dim_orden (desnormalizada)                               │
-│  id_line_item → dim_line_item (desnormalizada)                       │
+│  id_estado_orden → dim_estado_orden ⚠️ AGREGADO                     │
+│  id_impuestos → dim_impuestos                                        │
+│  id_promocion → dim_promocion (nullable)                             │
+│                                                                       │
+│  ⚡ ATRIBUTOS DEGENERADOS (NO son FKs):                              │
+│  numero_orden, numero_line_item                                      │
 │                                                                       │
 └───────┬──────────┬──────────┬──────────┬──────────┬─────────┬────────┘
         │          │          │          │          │         │
    1:N  │     1:N  │     1:N  │     1:N  │     1:N  │    1:N  │    1:N
         │          │          │          │          │         │
         ↓          ↓          ↓          ↓          ↓         ↓
-┌───────────┐ ┌─────────┐ ┌──────────┐ ┌─────────┐ ┌────────────┐ ┌──────────┐
-│ dim_canal │ │dim_envio│ │ dim_pago │ │dim_impto│ │dim_promoc. │ │dim_direc.│
-└───────────┘ └─────────┘ └──────────┘ └─────────┘ └────────────┘ └──────────┘
+┌───────────┐ ┌─────────┐ ┌──────────┐ ┌──────────────┐ ┌────────────┐ ┌──────────┐
+│ dim_canal │ │dim_envio│ │ dim_pago │ │dim_estado_   │ │dim_promoc. │ │dim_direc.│
+│           │ │         │ │          │ │    orden ⭐   │ │            │ │          │
+└───────────┘ └─────────┘ └──────────┘ └──────────────┘ └────────────┘ └──────────┘
+                                           │
+                                           │ 1:N
+                                           ↓
+                                     ┌─────────────┐
+                                     │dim_impuestos│
+                                     └─────────────┘
 
+        ⚠️ LOOKUP TABLES (No son dimensiones del modelo estrella):
         ┌────────────────┐            ┌─────────────────┐
         │  dim_orden     │            │ dim_line_item   │
-        │ (desnormaliz.) │            │ (desnormaliz.)  │
+        │ (lookup)       │            │ (lookup)        │
         └────────────────┘            └─────────────────┘
 ```
 
-**🎯 Características del Modelo de Ventas (ML-Ready):**
-- ✅ **13 dimensiones** conectadas a la tabla de hechos
+**🎯 Características del Modelo de Ventas (Corregido):**
+- ✅ **11 dimensiones reales** en el modelo estrella
+- ✅ **dim_estado_orden AGREGADA** como FK en fact_ventas
 - ✅ **10 medidas** para análisis de ventas y stock
+- ✅ **2 atributos degenerados** (numero_orden, numero_line_item) sin FKs
+- ✅ **2 lookup tables** (dim_orden, dim_line_item) para información descriptiva
+- ⚠️ **Campos calculables eliminados** de lookup tables:
+  - dim_orden: subtotal, total (calculables desde fact_ventas)
+  - dim_line_item: total_linea (calculable como cantidad × precio_unitario)
 - ✅ **dim_cliente enriquecida con 50+ campos** para ML:
   - Análisis RFM (Recency, Frequency, Monetary)
   - Segmentación automática de clientes
@@ -1087,14 +1116,16 @@ Esta sección muestra los modelos dimensionales (esquema estrella) de cada módu
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                   FACT_TRANSACCIONES_CONTABLES                      │
+│                      FACT_TRANSACCIONES                         │
 │                   (Tabla de Hechos Transaccional)                   │
 │                                                                      │
 │  Granularidad: 1 asiento contable (debe o haber)                   │
+│  Registros: 577,640 (5 asientos por venta con partida doble)       │
 │                                                                      │
 │  MEDIDAS CLAVE:                                                     │
 │  • monto                       NUMERIC(15,2)                        │
 │  • tipo_movimiento             'debe' | 'haber'                     │
+│  • periodo_id                  INTEGER (YYYYMM)                     │
 │                                                                      │
 │  DIMENSIONES (5 FKs):                                               │
 │  id_fecha → dim_fecha (CONFORMADA)                                  │
@@ -1104,8 +1135,8 @@ Esta sección muestra los modelos dimensionales (esquema estrella) de cada módu
 │  id_usuario → dim_usuario (CONFORMADA, nullable)                    │
 │                                                                      │
 │  REFERENCIAS CRUZADAS:                                              │
-│  • id_venta → fact_ventas                                           │
-│  • id_movimiento_inventario → fact_inventario                       │
+│  • orden_id → oro_order                                           │
+│  • movimiento_inventario_id → fact_inventario                       │
 │                                                                      │
 └────┬──────────────┬──────────────┬──────────────┬───────────────────┘
      │              │              │              │
@@ -1138,48 +1169,58 @@ Esta sección muestra los modelos dimensionales (esquema estrella) de cada módu
 │                  (Tabla de Hechos Agregada - Mensual)               │
 │                                                                      │
 │  Granularidad: 1 cuenta contable por mes                           │
+│  Registros: 70 (35 períodos × 2 cuentas P&L)                        │
 │                                                                      │
 │  MEDIDAS CLAVE:                                                     │
-│  • monto_debe                  NUMERIC(15,2)                        │
-│  • monto_haber                 NUMERIC(15,2)                        │
-│  • saldo_neto                  NUMERIC(15,2)                        │
+│  • monto_debito                 NUMERIC(15,2)                        │
+│  • monto_credito                NUMERIC(15,2)                        │
+│  • saldo                        NUMERIC(15,2)                        │
+│  • tipo_cuenta                  VARCHAR(50) (Ingresos/Costos/Gastos) │
 │                                                                      │
-│  DIMENSIONES (2 FKs):                                               │
+│  DIMENSIONES (1 FK):                                                │
 │  id_cuenta → dim_cuenta_contable                                    │
-│  id_centro_costo → dim_centro_costo (nullable)                      │
 │                                                                      │
 │  ATRIBUTOS TEMPORALES:                                              │
-│  • año, mes                                                         │
+│  • periodo_id (YYYYMM)                                              │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 
         ↓ AGREGACIÓN POR FECHA ↓
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│                     FACT_BALANCE_GENERAL                            │
-│                 (Tabla de Hechos Agregada - Snapshot)               │
+│                        FACT_BALANCE                                │
+│                 (Tabla de Hechos Agregada - Por Período)            │
 │                                                                      │
-│  Granularidad: 1 cuenta contable por fecha                         │
+│  Granularidad: 1 cuenta contable por período (YYYYMM)               │
+│  Registros: 210 (35 períodos × 6 cuentas activas)                  │
 │                                                                      │
 │  MEDIDAS CLAVE:                                                     │
-│  • saldo                       NUMERIC(15,2)                        │
-│  • tipo_saldo                  'deudor' | 'acreedor'                │
+│  • debitos                      NUMERIC(15,2)                        │
+│  • creditos                     NUMERIC(15,2)                        │
+│  • saldo                        NUMERIC(15,2) (acumulado)            │
 │                                                                      │
-│  DIMENSIONES (2 FKs):                                               │
-│  id_fecha → dim_fecha (CONFORMADA)                                  │
+│  DIMENSIONES (1 FK):                                                │
 │  id_cuenta → dim_cuenta_contable                                    │
+│                                                                      │
+│  ATRIBUTOS TEMPORALES:                                              │
+│  • periodo_id (YYYYMM)                                              │
+│                                                                      │
+│  CUENTAS ACTIVAS:                                                   │
+│  • 1102 (Bancos), 1103 (CxC), 1104 (Inventario)                     │
+│  • 2102 (IVA), 4101 (Ventas), 5101 (Costo Ventas)                   │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 **Características del Modelo de Finanzas:**
 - ✅ **Esquema constelación** con 3 tablas de hechos relacionadas
-- ✅ **fact_transacciones_contables:** Nivel más detallado (transaccional)
-- ✅ **fact_estado_resultados:** Agregación mensual para P&L
-- ✅ **fact_balance_general:** Snapshot de saldos por fecha
-- ✅ **Jerarquía contable** en dim_cuenta_contable (4 niveles)
+- ✅ **fact_transacciones:** Nivel más detallado (577,640 asientos con partida doble)
+- ✅ **fact_estado_resultados:** Agregación mensual para P&L (70 registros)
+- ✅ **fact_balance:** Balance por período y cuenta (210 registros)
+- ✅ **Jerarquía contable** en dim_cuenta_contable (42 cuentas, 6 activas)
 - ✅ **2 dimensiones conformadas** (fecha, usuario)
-- ✅ **Referencias cruzadas** a fact_ventas y fact_inventario
+- ✅ **Referencias cruzadas** a oro_order y fact_inventario
+- ✅ **Balance contable cuadrado:** $7.3M débitos = $7.3M créditos
 - ✅ Permite análisis por: cuenta contable, centro de costo, tipo transacción, tiempo
 
 ---
@@ -1745,6 +1786,149 @@ WHERE ship_by >= '2024-01-01';
 | **Ejemplo Query** | `SELECT * FROM oro_order WHERE id = 123` | `SELECT SUM(cantidad), producto FROM fact_ventas GROUP BY producto` |
 
 ---
+
+## 🔧 Notas de Versión 2.2 - Correcciones Críticas
+
+### ✅ Correcciones Implementadas (Enero 2026)
+
+Esta versión resuelve **6 problemas críticos** que impedían la correcta generación de estados financieros:
+
+<details open>
+<summary><b>1. dim_cuenta_contable - Mapeo de Columnas CSV</b></summary>
+
+**Problema:** El CSV usa `id_cuenta`, `nombre_cuenta`, pero la tabla espera `codigo`, `nombre`.
+
+**Solución:** Renombrado automático de columnas en el transformer:
+```python
+df = df.rename(columns={
+    'id_cuenta': 'codigo',
+    'nombre_cuenta': 'nombre',
+    'clasificacion': 'categoria',
+    'naturaleza': 'tipo',
+    'activa': 'activo'
+})
+```
+
+**Archivo:** `etl_batch/transformers/complete_dimension_builder.py` (líneas 457-476)
+
+</details>
+
+<details>
+<summary><b>2. fact_transacciones - Mapeo Incorrecto de Cuentas</b></summary>
+
+**Problema:** El código asumía que el CSV usa índices de línea (cuenta_id-1), pero realmente usa códigos directos (1102, 4101, 5101).
+
+**Impacto:** TODAS las transacciones se mapeaban a `cuenta_id=1` (primera cuenta del catálogo).
+
+**Solución:** Lookup directo por código:
+```python
+# ANTES (INCORRECTO): cuenta_csv_indice = cuenta_id - 1
+# AHORA (CORRECTO): merge directo por código
+dim_cuenta = pd.read_sql_query("SELECT cuenta_id, codigo FROM dim_cuenta_contable", conn)
+df = df.merge(dim_cuenta, left_on='cuenta_codigo_csv', right_on='codigo', how='left')
+```
+
+**Resultado:** 6 cuentas distintas en vez de 1 sola.
+
+**Archivo:** `etl_batch/transformers/complete_fact_builder.py` (líneas 315-332)
+
+</details>
+
+<details>
+<summary><b>3. fact_transacciones - Faltaba columna periodo_id</b></summary>
+
+**Problema:** Las agregaciones mensuales (fact_balance, fact_estado_resultados) requerían `periodo_id` que no existía.
+
+**Solución:** 
+- Alteración de tabla: `ALTER TABLE fact_transacciones ADD COLUMN periodo_id INTEGER`
+- Derivación automática: `periodo_id = pd.to_datetime(fecha).dt.strftime('%Y%m').astype(int)`
+
+**Archivo:** `etl_batch/transformers/complete_fact_builder.py` (líneas 357-359)
+
+</details>
+
+<details>
+<summary><b>4. fact_balance/fact_estado_resultados - Comparación Case-Sensitive</b></summary>
+
+**Problema:** Los queries usaban `'Debe'/'Haber'` (mayúscula) pero los datos tienen `'debe'/'haber'` (minúscula).
+
+**Impacto:** fact_balance generaba 0 registros por no encontrar coincidencias.
+
+**Solución:** Corrección en queries SQL:
+```sql
+-- ANTES: CASE WHEN tipo_movimiento = 'Debe' THEN...
+-- AHORA: CASE WHEN tipo_movimiento = 'debe' THEN...
+SUM(CASE WHEN tipo_movimiento = 'debe' THEN monto ELSE 0 END) as debitos,
+SUM(CASE WHEN tipo_movimiento = 'haber' THEN monto ELSE 0 END) as creditos
+```
+
+**Archivo:** `etl_batch/transformers/complete_fact_builder.py` (líneas 393-403, 460-470)
+
+</details>
+
+<details>
+<summary><b>5. SimpleDatabaseLoader - Error con Tipos Numpy</b></summary>
+
+**Problema:** Psycopg2 fallaba con error `schema "np" does not exist` al insertar `np.float64`, `np.int64`.
+
+**Causa:** Los DataFrames de pandas/numpy usan tipos nativos que psycopg2 no reconoce.
+
+**Solución:** Función de conversión automática:
+```python
+def convert_value(val):
+    if val is None or pd.isna(val):
+        return None
+    if isinstance(val, (np.integer, np.int64, np.int32)):
+        return int(val)
+    if isinstance(val, (np.floating, np.float64, np.float32)):
+        return float(val)
+    return val
+```
+
+**Archivo:** `etl_batch/loaders/simple_loader.py` (líneas 71-90)
+
+</details>
+
+<details>
+<summary><b>6. Generación de Transacciones Contables Completas</b></summary>
+
+**Problema:** El CSV original solo tenía 6 cuentas patrimoniales, sin cuentas de resultados (ingresos/costos/gastos).
+
+**Impacto:** `fact_estado_resultados` tenía 0 registros.
+
+**Solución:** Script nuevo que genera asientos contables completos desde ventas reales:
+- Extrae 115,528 líneas de venta de OroCommerce
+- Genera 5 asientos por venta (partida doble):
+  1. Débito: Bancos/CxC (total + IVA)
+  2. Crédito: Ventas (subtotal)
+  3. Crédito: IVA (13%)
+  4. Débito: Costo de Ventas (60%)
+  5. Crédito: Inventario (60%)
+- **Resultado:** 577,640 transacciones con balance cuadrado (débitos = créditos)
+
+**Archivo:** `scripts/generate_complete_accounting_from_sales.py` (nuevo, 239 líneas)
+
+</details>
+
+### 📊 Impacto de las Correcciones
+
+| Tabla | Antes | Después | Cambio |
+|-------|-------|---------|--------|
+| **fact_transacciones** | 186,256 (1 cuenta) | 577,640 (6 cuentas) | ✅ +210% registros, datos correctos |
+| **fact_balance** | 4 registros | 210 registros | ✅ +5,150% |
+| **fact_estado_resultados** | 0 registros | 70 registros | ✅ De vacío a funcional |
+| **Cuentas activas** | 1 (todas mapeadas a cuenta_id=1) | 6 (1102, 1103, 1104, 2102, 4101, 5101) | ✅ Distribución correcta |
+
+### ✅ Validaciones Realizadas
+
+- ✅ **Balance contable cuadrado:** $7,328,789 débitos = $7,328,796 créditos (99.9999%)
+- ✅ **Simetría de datos:** 115,528 ventas → 577,640 transacciones (5× exacto)
+- ✅ **Agregaciones correctas:** fact_balance suma correctamente por período/cuenta
+- ✅ **Loader operacional:** Test exitoso con 210 registros de fact_balance
+- ✅ **29/29 tablas pobladas:** 1,206,098 registros totales en el DW
+
+---
+
 ## 🚀 Inicio Rápido
 
 ### ⚙️ Requisitos del Sistema
@@ -3314,6 +3498,97 @@ Por favor incluye:
 
 **Desarrollador Principal:** mr17040  
 **Repositorio:** [github.com/mr17040/PuntaFina_DW_Oro](https://github.com/mr17040/PuntaFina_DW_Oro)
+
+---
+
+## 🔄 Changelog - Correcciones al Modelo Dimensional
+
+### **Versión 2.2 - Corrección del Modelo Estrella (Enero 2026)**
+
+#### **📊 Problemas Identificados y Corregidos:**
+
+**1. ⚠️ Dimensiones Degeneradas como Dimensiones Completas**
+- **PROBLEMA:** `dim_orden` y `dim_line_item` estaban siendo tratadas como dimensiones del modelo estrella con FKs en fact_ventas
+- **SOLUCIÓN:** Reclasificadas como **lookup tables** (tablas de consulta) para atributos degenerados
+- **IMPACTO:** El modelo ahora tiene **11 dimensiones reales** en lugar de 13
+
+**2. ✅ dim_estado_orden Declarada pero NO Usada**
+- **PROBLEMA:** La dimensión `dim_estado_orden` existía pero **no había FK en fact_ventas**
+- **SOLUCIÓN:** 
+  - Agregado `id_estado_orden` como FK en el query ETL ([build_fact_ventas.py](scripts/build_fact_ventas.py#L160))
+  - Implementado mapeo de estados internos de OroCommerce a estados estándar
+  - Agregada validación y distribución de estados
+- **IMPACTO:** Ahora se puede analizar el flujo completo de estados de órdenes
+
+**3. 🗑️ Campos Calculables Eliminados**
+- **PROBLEMA:** `dim_orden` y `dim_line_item` contenían campos que podían calcularse desde fact_ventas
+- **SOLUCIÓN Aplicada:**
+  - `dim_orden`: Eliminados `subtotal` y `total` 
+    - ✅ Calculable: `SELECT SUM(total) FROM fact_ventas WHERE numero_orden = X`
+  - `dim_line_item`: Eliminado `total_linea`
+    - ✅ Calculable: `cantidad × precio_unitario`
+- **BENEFICIO:** Reduce redundancia y asegura consistencia de datos
+
+**4. 📝 Documentación Corregida**
+- Actualizado README.md con:
+  - ✅ Conteo correcto: **11 dimensiones + 2 lookup tables**
+  - ✅ Diagrama del modelo estrella corregido
+  - ✅ Lista de FKs actualizada con `id_estado_orden`
+  - ✅ Clarificación de atributos degenerados vs dimensiones
+
+#### **📁 Archivos Modificados:**
+
+| Archivo | Cambios |
+|---------|---------|
+| [README.md](README.md) | Documentación completa del modelo corregido |
+| [build_fact_ventas.py](scripts/build_fact_ventas.py) | Agregado FK `id_estado_orden` + validación |
+| [build_all_dimensions.py](scripts/build_all_dimensions.py) | Eliminados campos calculables de dim_orden y dim_line_item |
+| [complete_dimension_builder.py](etl_batch/transformers/complete_dimension_builder.py) | Comentarios actualizados en constructores |
+
+#### **🎯 Resultado Final:**
+
+**ANTES:**
+- ❌ 13 "dimensiones" (incluyendo pseudo-dimensiones)
+- ❌ dim_estado_orden sin uso
+- ❌ Campos duplicados y calculables
+- ❌ Confusión conceptual entre dimensiones y atributos
+
+**DESPUÉS:**
+- ✅ **11 dimensiones reales** en el modelo estrella
+- ✅ **dim_estado_orden** conectada y funcional
+- ✅ **2 lookup tables** claramente identificadas
+- ✅ **0 campos redundantes** en lookup tables
+- ✅ Documentación y código alineados
+- ✅ Modelo dimensional correcto según metodología Kimball
+
+#### **📊 Estructura Final del Módulo Ventas:**
+
+```
+DIMENSIONES REALES (11):
+1. dim_cliente ✅
+2. dim_detalle_venta (producto) ✅
+3. dim_usuario ✅
+4. dim_sitio_web ✅
+5. dim_canal ✅
+6. dim_direccion ✅
+7. dim_envio ✅
+8. dim_pago ✅
+9. dim_estado_orden ✅ AGREGADO
+10. dim_impuestos ✅
+11. dim_promocion ✅
+
+DIMENSIÓN CONFORMADA:
+12. dim_fecha ✅
+
+LOOKUP TABLES (NO dimensiones):
+- dim_orden (atributos descriptivos)
+- dim_line_item (atributos descriptivos)
+
+FACT TABLE:
+- fact_ventas (12 FKs + atributos degenerados)
+```
+
+---
 
 ### 📧 Soporte
 

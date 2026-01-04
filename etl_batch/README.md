@@ -1,10 +1,12 @@
 # 🏪 PuntaFina ETL Batch System
 ## Sistema de ETL Optimizado para Procesamiento por Lotes
 
+[![Version](https://img.shields.io/badge/version-1.1-blue.svg)]()
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![Ubuntu](https://img.shields.io/badge/ubuntu-22.04-orange.svg)](https://ubuntu.com/)
 [![PostgreSQL](https://img.shields.io/badge/postgresql-12+-blue.svg)](https://www.postgresql.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Status](https://img.shields.io/badge/status-production-success.svg)]()
 
 ---
 
@@ -93,20 +95,50 @@ etl_batch/
 
 ### Fuentes de Datos
 
-| Fuente | Tablas | Registros Estimados |
+| Fuente | Tablas | Registros Procesados |
 |--------|--------|---------------------|
-| **OroCommerce** | 16 tablas | ~25,000 |
-| **OroCRM** | 1 tabla | ~1,200 |
-| **CSV Files** | 12 archivos | ~2,100 |
-| **TOTAL** | - | ~28,300 |
+| **OroCommerce** | 16 tablas | 115,528 ventas |
+| **OroCRM** | 1 tabla | 437,514 clientes |
+| **CSV Files** | 12 archivos | 577,640 transacciones contables |
+| **TOTAL** | - | 1,206,098 registros |
 
 ### Salidas del ETL
 
 | Tipo | Cantidad | Descripción |
 |------|----------|-------------|
-| **Dimensiones** | 20 tablas | Tablas de contexto |
+| **Dimensiones** | 24 tablas | Tablas de contexto |
 | **Hechos** | 5 tablas | Tablas de métricas |
-| **Registros** | ~145,000 | Total en DW |
+| **fact_ventas** | 115,528 | Líneas de venta |
+| **fact_inventario** | 408,397 | Movimientos de inventario |
+| **fact_transacciones** | 577,640 | Asientos contables (partida doble) |
+| **fact_estado_resultados** | 70 | P&L agregado mensual |
+| **fact_balance** | 210 | Balance por período y cuenta |
+| **TOTAL DW** | 29 tablas | 1,206,098 registros |
+
+---
+
+## 🔧 Correcciones Versión 1.1 (Enero 2026)
+
+Esta versión incluye **6 correcciones críticas** que resuelven problemas de mapeo, tipos de datos y generación de transacciones contables:
+
+### ✅ Correcciones Implementadas
+
+| # | Problema | Solución | Archivo |
+|---|----------|----------|---------|
+| 1 | **Mapeo de columnas CSV** | Renombrado automático `id_cuenta→codigo` | `transformers/complete_dimension_builder.py:457-476` |
+| 2 | **Mapeo incorrecto de cuentas** | Lookup directo por código vs. índices | `transformers/complete_fact_builder.py:315-332` |
+| 3 | **Faltaba columna periodo_id** | Agregada derivación automática YYYYMM | `transformers/complete_fact_builder.py:357-359` |
+| 4 | **Comparación case-sensitive** | Cambio a lowercase 'debe'/'haber' | `transformers/complete_fact_builder.py:393-403` |
+| 5 | **Error tipos numpy** | Conversión automática np→Python | `loaders/simple_loader.py:71-90` |
+| 6 | **Transacciones incompletas** | Generación de 5 asientos por venta | `scripts/generate_complete_accounting_from_sales.py` |
+
+### 📊 Impacto de las Correcciones
+
+- **fact_transacciones**: 186,256 → 577,640 registros (+210%)
+- **fact_balance**: 4 → 210 registros (+5,150%)
+- **fact_estado_resultados**: 0 → 70 registros (de vacío a funcional)
+- **Cuentas activas**: 1 → 6 cuentas (distribución correcta)
+- **Balance contable**: $7.3M débitos = $7.3M créditos (99.9999% cuadrado)
 
 ---
 
@@ -425,13 +457,17 @@ Este proyecto está bajo la Licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ## 🎯 Roadmap
 
-### Versión Actual: 1.0
+### Versión Actual: 1.1 (2026-01-04)
 
 - ✅ Procesamiento por lotes
 - ✅ Validación automática
 - ✅ Población inteligente
 - ✅ Checkpoints y recuperación
 - ✅ Monitoreo completo
+- ✅ **Corrección mapeo de cuentas contables**
+- ✅ **Conversión automática de tipos numpy**
+- ✅ **Generación completa de transacciones contables**
+- ✅ **Agregación correcta de fact_balance y fact_estado_resultados**
 
 ### Próximas Versiones
 
@@ -446,10 +482,11 @@ Este proyecto está bajo la Licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 ## ✅ Estado del Proyecto
 
 - **Estado**: ✅ Production Ready
-- **Versión**: 1.0.0
-- **Última actualización**: 2026-01-01
+- **Versión**: 1.1.0 (con correcciones críticas v2.2)
+- **Última actualización**: 2026-01-04
 - **Mantenimiento**: Activo
 - **Estabilidad**: Alta
+- **Correcciones v2.2**: 6 bugs críticos resueltos (mapeo de cuentas, tipos numpy, transacciones completas)
 
 ---
 

@@ -60,14 +60,16 @@ def get_oro_connection():
     import psycopg2
     from dotenv import load_dotenv
 
-    load_dotenv(CONFIG_DIR / ".env")
+    # Cargar .env desde la raíz del proyecto
+    env_file = ROOT / ".env"
+    load_dotenv(env_file)
 
     return psycopg2.connect(
-        host=os.getenv("ORO_DB_HOST"),
-        port=int(os.getenv("ORO_DB_PORT")),
-        dbname=os.getenv("ORO_DB_NAME"),
-        user=os.getenv("ORO_DB_USER"),
-        password=os.getenv("ORO_DB_PASS"),
+        host=os.getenv("ORO_DB_HOST", "localhost"),
+        port=int(os.getenv("ORO_DB_PORT", 5432)),
+        dbname=os.getenv("ORO_DB_NAME", "orocommerce"),
+        user=os.getenv("ORO_DB_USER", "sa"),
+        password=os.getenv("ORO_DB_PASS", "IngDatos123*"),
     )
 
 
@@ -634,7 +636,7 @@ def build_dim_estado_orden():
 
 
 def build_dim_orden():
-    """Construye dimensión de órdenes (desnormalizada)"""
+    """Construye dimensión de órdenes (lookup table para atributos degenerados)"""
     print("Construyendo dim_orden...")
 
     conn = get_oro_connection()
@@ -647,8 +649,6 @@ def build_dim_orden():
         COALESCE(c.name, 'Cliente ' || o.customer_id) as cliente_nombre,
         COALESCE(u.first_name || ' ' || u.last_name, 'Usuario ' || o.customer_user_id) as usuario_nombre_completo,
         COALESCE(w.name, 'Sitio ' || o.website_id) as sitio_web_nombre,
-        COALESCE(o.subtotal_value, 0.0) as subtotal,
-        COALESCE(o.total_value, 0.0) as total,
         o.currency as moneda,
         o.created_at::date as fecha_orden,
         o.updated_at::date as fecha_actualizacion,
@@ -664,6 +664,8 @@ def build_dim_orden():
 
     df = pd.read_sql(query, conn)
     conn.close()
+    
+    print(f"   NOTA: Campos 'subtotal' y 'total' eliminados - calcúlables desde fact_ventas")
 
     return save_dimension(df, "dim_orden")
 
@@ -759,7 +761,7 @@ def add_dynamic_stock_to_line_item(df, conn):
 
 
 def build_dim_line_item():
-    """Construye dimensión de line items SIMPLE según diccionario_campos.md"""
+    """Construye dimensión de line items (lookup table para atributos degenerados)"""
     print("Construyendo dim_line_item...")
 
     conn = get_oro_connection()
@@ -773,7 +775,6 @@ def build_dim_line_item():
         COALESCE(p.name, 'Producto ' || oli.product_id) as producto_nombre,
         oli.quantity::numeric as cantidad,
         oli.value::numeric as precio_unitario,
-        (oli.quantity * oli.value)::numeric as total_linea,
         oli.currency as moneda,
         COALESCE(pu.code, 'unit') as unidad
     FROM oro_order_line_item oli
@@ -787,6 +788,7 @@ def build_dim_line_item():
     conn.close()
 
     print(f"   Line items extraídos: {len(df)}")
+    print(f"   NOTA: Campo 'total_linea' eliminado - calculable como cantidad * precio_unitario")
 
     return save_dimension(df, "dim_line_item")
 

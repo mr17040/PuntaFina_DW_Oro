@@ -72,6 +72,21 @@ class SimpleDatabaseLoader:
             # Reemplazar NaN con None
             df_to_load = df_to_load.where(pd.notna(df_to_load), None)
             
+            # Convertir tipos numpy a tipos nativos de Python para evitar errores en psycopg2
+            import numpy as np
+            
+            def convert_value(val):
+                """Convertir valor numpy a tipo nativo Python"""
+                if val is None or pd.isna(val):
+                    return None
+                if isinstance(val, (np.integer, np.int64, np.int32)):
+                    return int(val)
+                if isinstance(val, (np.floating, np.float64, np.float32)):
+                    return float(val)
+                if isinstance(val, np.bool_):
+                    return bool(val)
+                return val
+            
             # Truncar tabla
             logger.info(f"🗑️  Truncando tabla {table_name}...")
             cursor.execute(f"TRUNCATE TABLE {table_name} RESTART IDENTITY CASCADE")
@@ -88,7 +103,7 @@ class SimpleDatabaseLoader:
             
             for i in range(0, total_rows, batch_size):
                 batch = df_to_load.iloc[i:i+batch_size]
-                values = [tuple(row) for row in batch.values]
+                values = [tuple(convert_value(val) for val in row) for row in batch.values]
                 
                 cursor.executemany(insert_query, values)
                 rows_inserted += len(values)
