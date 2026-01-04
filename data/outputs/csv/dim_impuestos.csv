@@ -1,0 +1,7 @@
+id_impuestos,codigo_impuesto,descripcion,tasa,estado
+1,LOS_ANGELES_COUNTY_SALES_TAX,Sales Tax,0.09,Activo
+2,ORANGE_COUNTY_SALES_TAX,Sales Tax,0.08,Activo
+3,VENTURA_COUNTY_SALES_TAX,Sales Tax,0.075,Activo
+4,CULVER_CITY_SALES_TAX,Sales Tax,0.095,Activo
+5,SANTA_MONICA_SALES_TAX,Sales Tax,0.095,Activo
+6,IVA_SV_13,Impuesto al Valor Agregado El Salvador 13%,0.13,Activo

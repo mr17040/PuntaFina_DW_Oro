@@ -1,11 +1,38 @@
-# Credenciales
+# Credenciales y configuración sensible
 config/.env
+*.env
+.env.*
 
-# Salidas generadas por el ETL (CSV/Parquet)
-data/outputs/csv/*.csv
-data/outputs/parquet/**
+# Entorno virtual de Python
+venv/
+env/
+ENV/
+.venv/
 
-# Estados incrementales y logs
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Logs y estados temporales
 data/_state/**
 logs/**
-venv/
+
+# Archivos temporales del sistema
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-*
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/

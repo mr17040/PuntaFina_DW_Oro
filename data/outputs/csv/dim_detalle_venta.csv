@@ -1,0 +1,65 @@
+id_producto,sku,nombre,descripcion,unidad_medida,estado,fecha_creacion
+1,0RT28,Sandalias Deportivas Acuáticas,Sin descripción,item,Activo,2025-10-05
+10,2LM04,Botas Casual Chukka Ante,Sin descripción,item,Activo,2025-10-05
+11,2RW93,Zapatillas Slip-On Casual Relax,Sin descripción,item,Activo,2025-10-05
+12,2TK59,Sandalias Gladiador Fashion Mujer,Sin descripción,item,Activo,2025-10-05
+13,2WE71,Tacones Stiletto Mujer Elegantes,Sin descripción,item,Activo,2025-10-05
+14,3ET67,Zapatos Loafer Borlas Ejecutivos,Sin descripción,set,Activo,2025-10-05
+15,3JK76,Sandalias Cuero Artesanales Premium,Sin descripción,item,Activo,2025-10-05
+16,3JK90,Calzado Golf Waterproof Premium,Sin descripción,item,Activo,2025-10-05
+17,3LV37,Zapatillas Running Ligeras Performance,Sin descripción,piece,Activo,2025-10-05
+18,3RE23,Botas Motociclista Protección Total,Sin descripción,piece,Activo,2025-10-05
+19,3TU20,Zapatos Oxford Mujer Profesionales,Sin descripción,item,Activo,2025-10-05
+2,1AB92,Botas Trabajo Punta Acero Seguridad,Sin descripción,item,Activo,2025-10-05
+20,3UK92,Zapatillas Casual Canvas Juveniles,Sin descripción,item,Activo,2025-10-05
+21,3YB32,Sandalias Plataforma Mujer Elegantes,Sin descripción,piece,Activo,2025-10-05
+22,4HC51,Zapatillas Running Trail Mountain,Sin descripción,piece,Activo,2025-10-05
+23,4HJ92,Zapatos Salón Tacón Medio Oficina,Sin descripción,item,Activo,2025-10-05
+24,4KL66,Botas Senderismo Trail Explorer,Sin descripción,item,Activo,2025-10-05
+25,4PJ19,Zapatos Mocasín Elegantes Sin Cordón,Sin descripción,item,Activo,2025-10-05
+26,4QI22,Botas Fashion Urbanas Mujer,Sin descripción,piece,Activo,2025-10-05
+27,5BM69,Zapatillas Deportivas Running Pro,Sin descripción,item,Activo,2025-10-05
+28,5GE27,Sandalias Playa Flip-Flop Confort,Sin descripción,item,Activo,2025-10-05
+29,5GF68,Calzado Fútbol Tacos Profesionales,Sin descripción,item,Activo,2025-10-05
+3,1GB82,Calzado Gym Training Multisport,Sin descripción,set,Activo,2025-10-05
+30,5GN30,Botas Montaña Hiking Adventure,Sin descripción,piece,Activo,2025-10-05
+31,5IF41,Sandalias Tipo Huarache Tradicionales,Sin descripción,item,Activo,2025-10-05
+32,5TJ23,Zapatos Oxford Piel Ejecutivos,Sin descripción,set,Activo,2025-10-05
+33,5TU10,Sandalias Sport Outdoor Trekking,Sin descripción,item,Activo,2025-10-05
+34,5UB78,Zapatillas Skate Urban Style,Sin descripción,item,Activo,2025-10-05
+35,5XY10,Zapatos Tipo Brogue Premium Cuero,Sin descripción,item,Activo,2025-10-05
+36,6BC45,Sandalias Playa Niños Coloridas,Sin descripción,item,Activo,2025-10-05
+37,6GH85,Calzado Ciclismo Clips Performance,Sin descripción,item,Activo,2025-10-05
+38,6LJ54,Botas de Trabajo Industrial Reforzadas,Sin descripción,item,Activo,2025-10-05
+39,6PM40,Tacones Plataforma Fiesta Mujer,Sin descripción,item,Activo,2025-10-05
+4,1GS46,Zapatillas Tenis Premium Leather,Sin descripción,item,Activo,2025-10-05
+40,6UB33,Calzado Volleyball Indoor Pro,Sin descripción,set,Activo,2025-10-05
+41,6UK81,Zapatillas Tenis Clásicas Blancas,Sin descripción,item,Activo,2025-10-05
+42,6VC22,Sandalias Casual Verano Acolchadas,Sin descripción,item,Activo,2025-10-05
+43,7BS71,Zapatos Derby Clásicos Oficina,Sin descripción,item,Activo,2025-10-05
+44,7BS72,Zapatillas Training CrossFit Elite,Sin descripción,set,Activo,2025-10-05
+45,7NM98,Sandalias Slides Confort Unisex,Sin descripción,set,Activo,2025-10-05
+46,7NQ22,Zapatos Piel Charol Eventos Formales,Sin descripción,set,Activo,2025-10-05
+47,7TY55,Zapatillas Walking Confort Plus,Sin descripción,item,Activo,2025-10-05
+48,7YV41,Calzado Tenis Clay Court Especial,Sin descripción,set,Activo,2025-10-05
+49,8BC37,Zapatillas Basketball High Top,Sin descripción,piece,Activo,2025-10-05
+5,1TB10,Botas Invierno Térmicas Impermeables,Sin descripción,set,Activo,2025-10-05
+50,8DO33,Botas Chelsea Casual Premium,Sin descripción,item,Activo,2025-10-05
+51,8LG34,Botas Militares Tácticas Combat,Sin descripción,item,Activo,2025-10-05
+52,8NN54,Botas Vaqueras Western Clásicas,Sin descripción,set,Activo,2025-10-05
+53,8TF72,Zapatos Penny Loafer Clásicos,Sin descripción,item,Activo,2025-10-05
+54,8UF78,Zapatillas Casual Urbanas Confort,Sin descripción,item,Activo,2025-10-05
+55,8VS71,Zapatillas Lifestyle Urban Street,Sin descripción,item,Activo,2025-10-05
+56,9GQ28,Zapatos Monk Strap Doble Hebilla,Sin descripción,item,Activo,2025-10-05
+57,9OK21,Sandalias Deportivas Acuáticas,Sin descripción,piece,Activo,2025-10-05
+58,9OL25,Botas Trabajo Punta Acero Seguridad,Sin descripción,set,Activo,2025-10-05
+59,XS56,Calzado Gym Training Multisport,Sin descripción,item,Activo,2025-10-05
+6,2CF67,Botas Lluvia Impermeables Pro,Sin descripción,item,Activo,2025-10-05
+60,WLCH1,Zapatillas Tenis Premium Leather,Sin descripción,item,Activo,2025-10-05
+61,TAG1,Botas Invierno Térmicas Impermeables,Sin descripción,item,Activo,2025-10-05
+62,TAG2,Botas Lluvia Impermeables Pro,Sin descripción,item,Activo,2025-10-05
+63,TAG3,Calzado Natación Acuático Grip,Sin descripción,item,Activo,2025-10-05
+64,2EW02,Calzado Boxing Botín Competencia,Sin descripción,set,Activo,2025-10-05
+7,2JD29,Calzado Natación Acuático Grip,Sin descripción,item,Activo,2025-10-05
+8,2JD90,Calzado Boxing Botín Competencia,Sin descripción,item,Activo,2025-10-05
+9,2JV62,Sandalias Ortopédicas Soporte Arco,Sin descripción,set,Activo,2025-10-05
