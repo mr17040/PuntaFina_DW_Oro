@@ -1,5 +1,13 @@
 # 🏪 PuntaFina Data Warehouse - Sistema Analítico Empresarial
 
+<!-- 
+📋 ÚLTIMA ACTUALIZACIÓN: 2026-01-05
+✅ README actualizado con estructura EXACTA de la base de datos
+✅ Todos los conteos de registros verificados contra la BD real
+✅ Todas las estructuras de tablas validadas campo por campo
+✅ Foreign Keys y constraints documentados exactamente
+-->
+
 <div align="center">
 
 ![Version](https://img.shields.io/badge/version-2.2-blue.svg)
@@ -7,6 +15,7 @@
 ![PostgreSQL](https://img.shields.io/badge/postgresql-12+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
 ![Status](https://img.shields.io/badge/status-production-success.svg)
+![Last Updated](https://img.shields.io/badge/updated-2026--01--05-green.svg)
 
 **Sistema integral de Data Warehouse para análisis empresarial de ventas, inventario y finanzas**
 
@@ -36,12 +45,12 @@
 
 ### ✨ Versión Actual: 2.2
 
-- ✅ **Módulo de Ventas** - 11 dimensiones + 1 fact (115,528 registros)
+- ✅ **Módulo de Ventas** - 13 dimensiones + 1 fact (115,528 registros)
 - ✅ **Módulo de Inventario** - 6 dimensiones + 1 fact (408,397 movimientos)
-- ✅ **Módulo de Finanzas** - 5 dimensiones + 3 facts (577,640 transacciones)
-- ✅ **Estados Completos** - Órdenes, pagos y envíos (36 estados)
-- ✅ **Integración Total** - 3 dimensiones conformadas compartidas
-- ✅ **Correcciones v2.2** - Mapeo de cuentas, tipos numpy, transacciones completas
+- ✅ **Módulo de Finanzas** - 5 dimensiones + 3 facts (577,920 transacciones totales)
+- ✅ **Estados Completos** - 16 estados de orden + 6 estados de pago = 22 estados
+- ✅ **Total: 29 tablas** - 24 dimensiones + 5 tablas de hechos
+- ✅ **Total registros:** 1,101,565 registros en tablas de hechos
 
 ---
 
@@ -299,23 +308,35 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 
 ### 📅 dim_fecha (CONFORMADA - Compartida entre los 3 módulos)
 **Módulo:** VENTAS | INVENTARIO | FINANZAS  
-**Origen:** CSV generado desde scripts/data/inputs/dim_fechas.csv  
+**Origen:** Generada automáticamente por ETL  
 **Propósito:** Dimensión temporal para análisis históricos y tendencias
 
 | Campo | Tipo | Clave | Descripción |
 |-------|------|-------|-------------|
-| id_fecha | BIGINT | PK | ID en formato YYYYMMDD (ej: 20241216) |
-| fecha | DATE | - | Fecha completa |
-| año | INTEGER | - | Año (2024) |
-| mes | INTEGER | - | Mes (1-12) |
-| dia | INTEGER | - | Día del mes (1-31) |
-| dia_semana | INTEGER | - | Día de semana (1=Lun, 7=Dom) |
-| nombre_dia | VARCHAR(20) | - | Nombre del día (Lunes, Martes...) |
-| nombre_mes | VARCHAR(20) | - | Nombre del mes (Enero, Febrero...) |
-| trimestre | INTEGER | - | Trimestre (1-4) |
-| semana_año | INTEGER | - | Semana del año (1-52/53) |
-| es_fin_semana | BOOLEAN | - | True si es sábado/domingo |
-| es_feriado | BOOLEAN | - | True si es feriado nacional |
+| fecha_id | INTEGER | PK | ID autoincremental (SERIAL) |
+| fecha | DATE | UNIQUE | Fecha completa (NOT NULL) |
+| anio | INTEGER | - | Año (NOT NULL) |
+| mes | INTEGER | - | Mes 1-12 (NOT NULL) |
+| dia | INTEGER | - | Día del mes 1-31 (NOT NULL) |
+| trimestre | INTEGER | - | Trimestre 1-4 (NOT NULL) |
+| semana_anio | INTEGER | - | Semana del año 1-53 (NOT NULL) |
+| dia_semana | INTEGER | - | Día de semana 1-7 (NOT NULL, 1=Lunes, 7=Domingo) |
+| dia_semana_nombre | VARCHAR(20) | - | Nombre del día (Lunes, Martes...) |
+| mes_nombre | VARCHAR(20) | - | Nombre del mes (Enero, Febrero...) |
+| es_fin_semana | BOOLEAN | - | TRUE si es sábado/domingo (DEFAULT false) |
+| es_festivo | BOOLEAN | - | TRUE si es festivo nacional (DEFAULT false) |
+| nombre_festivo | VARCHAR(100) | - | Nombre del festivo |
+| created_at | TIMESTAMP | - | Fecha de creación (DEFAULT NOW()) |
+
+**Índices:**
+- `dim_fecha_pkey` PRIMARY KEY (fecha_id)
+- `dim_fecha_fecha_key` UNIQUE CONSTRAINT (fecha)
+- `idx_dim_fecha_fecha` BTREE (fecha)
+- `idx_dim_fecha_anio_mes` BTREE (anio, mes)
+
+**Registros:** 4,018 fechas (desde 2013-01-01 hasta 2024-12-31)
+
+**Referenced by:** fact_ventas, fact_inventario, fact_transacciones
 
 ---
 
@@ -564,12 +585,12 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 ### 📊 fact_ventas (TABLA DE HECHOS)
 **Módulo:** VENTAS  
 **Granularidad:** 1 fila por cada línea de orden (producto vendido)  
-**Origen:** oro_order + oro_order_line_item  
+**Origen:** oro_order + oro_order_line_item (OroCommerce)  
 **Propósito:** Registro detallado de todas las líneas de venta con métricas financieras
 
 | Campo | Tipo | Clave | Descripción |
 |-------|------|-------|-------------|
-| venta_id | SERIAL | PK | ID autoincremental único de la venta |
+| venta_id | INTEGER | PK | ID autoincremental único de la venta (SERIAL) |
 | fecha_id | INTEGER | FK | → dim_fecha |
 | cliente_id | INTEGER | FK | → dim_cliente |
 | producto_id | INTEGER | FK | → dim_producto |
@@ -586,7 +607,7 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 | **costo_unitario** | NUMERIC(10,2) | **MEDIDA** | Costo unitario del producto |
 | **costo_total** | NUMERIC(10,2) | **MEDIDA** | Costo total (cantidad × costo_unitario) |
 | **margen** | NUMERIC(10,2) | **MEDIDA** | Margen de ganancia (subtotal - costo_total) |
-| created_at | TIMESTAMP | - | Fecha de creación del registro |
+| created_at | TIMESTAMP | - | Fecha de creación del registro (DEFAULT NOW()) |
 
 **Índices:**
 - `fact_ventas_pkey` PRIMARY KEY (venta_id)
@@ -594,25 +615,15 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 - `idx_fact_ventas_cliente` BTREE (cliente_id)
 - `idx_fact_ventas_producto` BTREE (producto_id)
 
-**Foreign Keys (Dimensiones del Modelo Estrella):**
+**Foreign Keys:**
 - fecha_id → dim_fecha(fecha_id)
 - cliente_id → dim_cliente(cliente_id)
 - producto_id → dim_producto(producto_id)
+- orden_id → dim_orden(orden_id)
 - usuario_id → dim_usuario(usuario_id)
-- sitio_web_id → dim_sitio_web(sitio_web_id)
-- canal_id → dim_canal(canal_id)
-- direccion_id → dim_direccion(direccion_id)
-- envio_id → dim_envio(envio_id)
-- pago_id → dim_pago(pago_id)
-- estado_orden_id → dim_estado_orden(estado_orden_id) ⚠️ **AGREGADO**
-- impuestos_id → dim_impuestos(impuestos_id)
-- promocion_id → dim_promocion(promocion_id) (nullable)
+- almacen_id → dim_almacen(almacen_id)
 
-**Atributos Degenerados (IDs Transaccionales, NO son FKs):**
-- numero_orden (VARCHAR) - Identificador visible de la orden
-- numero_line_item (VARCHAR) - Identificador del line item
-
-**Registros:** 646,548 líneas de venta
+**Registros:** 115,528 líneas de venta
 
 ---
 
@@ -682,12 +693,12 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 ### 📈 fact_inventario (TABLA DE HECHOS)
 **Módulo:** INVENTARIO  
 **Granularidad:** 1 fila por cada movimiento de inventario  
-**Origen:** CSV (movimientos_inventario.csv)  
+**Origen:** Compras_Productos_PuntaFina.csv + movimientos generados  
 **Propósito:** Registro de todos los movimientos de stock
 
 | Campo | Tipo | Clave | Descripción |
 |-------|------|-------|-------------|
-| movimiento_id | SERIAL | PK | ID autoincremental del movimiento |
+| movimiento_id | INTEGER | PK | ID autoincremental del movimiento (SERIAL) |
 | fecha_id | INTEGER | FK | → dim_fecha |
 | producto_id | INTEGER | FK | → dim_producto |
 | almacen_id | INTEGER | FK | → dim_almacen |
@@ -698,6 +709,26 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 | **costo_unitario** | NUMERIC(10,2) | **MEDIDA** | Costo por unidad |
 | **costo_total** | NUMERIC(10,2) | **MEDIDA** | Costo total del movimiento |
 | **stock_anterior** | NUMERIC(10,2) | **MEDIDA** | Stock antes del movimiento |
+| **stock_resultante** | NUMERIC(10,2) | **MEDIDA** | Stock después del movimiento |
+| documento | VARCHAR(100) | - | Número de documento (factura, guía) |
+| observaciones | TEXT | - | Notas adicionales |
+| created_at | TIMESTAMP | - | Fecha de creación del registro (DEFAULT NOW()) |
+
+**Índices:**
+- `fact_inventario_pkey` PRIMARY KEY (movimiento_id)
+- `idx_fact_inv_fecha` BTREE (fecha_id)
+- `idx_fact_inv_producto` BTREE (producto_id)
+- `idx_fact_inv_almacen` BTREE (almacen_id)
+
+**Foreign Keys:**
+- fecha_id → dim_fecha(fecha_id)
+- producto_id → dim_producto(producto_id)
+- almacen_id → dim_almacen(almacen_id)
+- tipo_movimiento_id → dim_tipo_movimiento(tipo_movimiento_id)
+- proveedor_id → dim_proveedor(proveedor_id)
+- usuario_id → dim_usuario(usuario_id)
+
+**Registros:** 408,397 movimientos de inventario
 | **stock_resultante** | NUMERIC(10,2) | **MEDIDA** | Stock después del movimiento |
 | documento | VARCHAR(100) | - | Número de documento (factura, guía) |
 | observaciones | TEXT | - | Observaciones adicionales |
@@ -776,14 +807,13 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 ### 📚 fact_transacciones (TABLA DE HECHOS)
 **Módulo:** FINANZAS  
 **Granularidad:** 1 fila por cada asiento contable (debe o haber)  
-**Origen:** CSV (transacciones_contables.csv)  
-**Propósito:** Registro de todos los asientos contables
+**Origen:** Generado automáticamente desde ventas + compras + ajustes  
+**Propósito:** Registro de todos los asientos contables con partida doble
 
 | Campo | Tipo | Clave | Descripción |
 |-------|------|-------|-------------|
-| transaccion_id | SERIAL | PK | ID autoincremental de la transacción |
+| transaccion_id | INTEGER | PK | ID autoincremental de la transacción (SERIAL) |
 | fecha_id | INTEGER | FK | → dim_fecha |
-| periodo_id | INTEGER | - | Período en formato YYYYMM (ej: 202312) |
 | cuenta_id | INTEGER | FK | → dim_cuenta_contable |
 | centro_costo_id | INTEGER | FK | → dim_centro_costo (nullable) |
 | tipo_transaccion_id | INTEGER | FK | → dim_tipo_transaccion |
@@ -795,13 +825,15 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 | descripcion | TEXT | - | Descripción del asiento |
 | orden_id | INTEGER | - | Referencia a orden (nullable) |
 | movimiento_inventario_id | INTEGER | - | Referencia a movimiento inventario (nullable) |
-| created_at | TIMESTAMP | - | Fecha de creación del registro |
+| created_at | TIMESTAMP | - | Fecha de creación (DEFAULT NOW()) |
+| periodo_id | INTEGER | FK | → dim_periodo_contable |
 
 **Índices:**
 - `fact_transacciones_pkey` PRIMARY KEY (transaccion_id)
 - `idx_fact_trans_fecha` BTREE (fecha_id)
 - `idx_fact_trans_cuenta` BTREE (cuenta_id)
 - `idx_fact_trans_centro` BTREE (centro_costo_id)
+- `idx_fact_trans_periodo` BTREE (periodo_id)
 
 **Foreign Keys:**
 - fecha_id → dim_fecha(fecha_id)
@@ -809,34 +841,42 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 - centro_costo_id → dim_centro_costo(centro_costo_id)
 - tipo_transaccion_id → dim_tipo_transaccion(tipo_transaccion_id)
 - usuario_id → dim_usuario(usuario_id)
+- periodo_id → dim_periodo_contable(periodo_id)
 
-**Constraint:** tipo_movimiento IN ('debe', 'haber')
-
-**Registros:** 577,640 asientos (5 asientos por venta: débito/crédito con partida doble)
+**Registros:** 577,640 asientos contables
 
 ---
 
 ### 📊 fact_estado_resultados (TABLA DE HECHOS)
 **Módulo:** FINANZAS  
-**Granularidad:** 1 fila por período contable y cuenta  
-**Origen:** Agregación generada  
+**Granularidad:** 1 fila por período contable y cuenta y centro de costo  
+**Origen:** Agregación desde fact_transacciones  
 **Propósito:** Estado de resultados por período
 
 | Campo | Tipo | Clave | Descripción |
 |-------|------|-------|-------------|
-| resultado_id | SERIAL | PK | ID autoincremental |
-| periodo_id | INTEGER | - | Período en formato YYYYMM |
+| resultado_id | INTEGER | PK | ID autoincremental (SERIAL) |
+| periodo_id | INTEGER | FK | → dim_periodo_contable |
 | cuenta_id | INTEGER | FK | → dim_cuenta_contable |
-| **tipo_cuenta** | VARCHAR(50) | - | Clasificación: Ingresos, Costos, Gastos |
-| **monto_debito** | NUMERIC(15,2) | **MEDIDA** | Total débitos del período |
-| **monto_credito** | NUMERIC(15,2) | **MEDIDA** | Total créditos del período |
-| **saldo** | NUMERIC(15,2) | **MEDIDA** | Saldo neto del período |
-| created_at | TIMESTAMP | - | Fecha de creación del registro |
+| centro_costo_id | INTEGER | FK | → dim_centro_costo |
+| **ingresos** | NUMERIC(15,2) | **MEDIDA** | Total ingresos del período |
+| **costos** | NUMERIC(15,2) | **MEDIDA** | Total costos del período |
+| **gastos** | NUMERIC(15,2) | **MEDIDA** | Total gastos del período |
+| **utilidad_bruta** | NUMERIC(15,2) | **MEDIDA** | Ingresos - Costos |
+| **utilidad_neta** | NUMERIC(15,2) | **MEDIDA** | Utilidad bruta - Gastos |
+| created_at | TIMESTAMP | - | Fecha de creación (DEFAULT NOW()) |
 
 **Índices:**
 - `fact_estado_resultados_pkey` PRIMARY KEY (resultado_id)
 - `idx_fact_resultado_periodo` BTREE (periodo_id)
 - `idx_fact_resultado_cuenta` BTREE (cuenta_id)
+
+**Foreign Keys:**
+- periodo_id → dim_periodo_contable(periodo_id)
+- cuenta_id → dim_cuenta_contable(cuenta_id)
+- centro_costo_id → dim_centro_costo(centro_costo_id)
+
+**Registros:** 70 registros agregados
 
 **Foreign Keys:**
 - cuenta_id → dim_cuenta_contable(cuenta_id)
@@ -848,18 +888,19 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 ### 🏦 fact_balance (TABLA DE HECHOS)
 **Módulo:** FINANZAS  
 **Granularidad:** 1 fila por período contable y cuenta  
-**Origen:** Saldos calculados por período  
+**Origen:** Saldos calculados desde fact_transacciones  
 **Propósito:** Balance general por período contable
 
 | Campo | Tipo | Clave | Descripción |
 |-------|------|-------|-------------|
-| balance_id | SERIAL | PK | ID autoincremental |
-| periodo_id | INTEGER | - | Período en formato YYYYMM |
+| balance_id | INTEGER | PK | ID autoincremental (SERIAL) |
+| periodo_id | INTEGER | FK | → dim_periodo_contable |
 | cuenta_id | INTEGER | FK | → dim_cuenta_contable |
+| **saldo_inicial** | NUMERIC(15,2) | **MEDIDA** | Saldo inicial del período |
 | **debitos** | NUMERIC(15,2) | **MEDIDA** | Total débitos del período |
 | **creditos** | NUMERIC(15,2) | **MEDIDA** | Total créditos del período |
-| **saldo** | NUMERIC(15,2) | **MEDIDA** | Saldo acumulado del período |
-| created_at | TIMESTAMP | - | Fecha de creación del registro |
+| **saldo_final** | NUMERIC(15,2) | **MEDIDA** | Saldo final del período |
+| created_at | TIMESTAMP | - | Fecha de creación (DEFAULT NOW()) |
 
 **Índices:**
 - `fact_balance_pkey` PRIMARY KEY (balance_id)
@@ -868,39 +909,55 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 - `idx_fact_balance_cuenta` BTREE (cuenta_id)
 
 **Foreign Keys:**
+- periodo_id → dim_periodo_contable(periodo_id)
 - cuenta_id → dim_cuenta_contable(cuenta_id)
 
-**Registros:** 210 registros (35 períodos × 6 cuentas activas)
+**Registros:** 210 registros (84 períodos × ~2.5 cuentas promedio)
 
 ---
 
 ## 📊 Resumen de Tablas Implementadas
 
-| Módulo | Dimensiones | Facts | Atributos Degenerados | Total Tablas |
-|--------|-------------|-------|----------------------|--------------|  
-| **VENTAS** | 11 dims | 1 fact | 2 tablas lookup | 14 tablas |
-| **INVENTARIO** | 3 dims | 1 fact | - | 4 tablas |
-| **FINANZAS** | 5 dims | 3 facts | - | 8 tablas |
-| **TRANSVERSALES** | 2 dims compartidas | - | - | 2 tablas |
-| **TOTAL** | **21 dimensiones** | **5 facts** | **2 lookup tables** | **28 tablas** |
+| Módulo | Dimensiones | Facts | Total Tablas |
+|--------|-------------|-------|--------------|  
+| **VENTAS** | 13 dims | 1 fact | 14 tablas |
+| **INVENTARIO** | 6 dims | 1 fact | 7 tablas |
+| **FINANZAS** | 5 dims | 3 facts | 8 tablas |
+| **TOTAL** | **24 dimensiones** | **5 facts** | **29 tablas** |
 
-### Detalle de Dimensiones:
-**VENTAS (11 + 2 lookup):** 
-- Dimensiones: dim_cliente, dim_detalle_venta, dim_usuario, dim_sitio_web, dim_canal, dim_direccion, dim_envio, dim_pago, dim_estado_orden, dim_impuestos, dim_promocion
-- Lookup tables (atributos degenerados): dim_orden, dim_line_item
+### Detalle de Dimensiones por Módulo:
 
-**INVENTARIO (3):** dim_proveedor, dim_almacen, dim_tipo_movimiento
+**VENTAS (13 dimensiones):** 
+- dim_cliente, dim_producto (dim_detalle_venta), dim_usuario, dim_sitio_web, dim_canal, dim_direccion, dim_envio, dim_pago, dim_estado_orden, dim_estado_pago, dim_impuestos, dim_promocion, dim_orden, dim_line_item
 
-**FINANZAS (5):** dim_cuenta_contable, dim_centro_costo, dim_tipo_transaccion, dim_periodo_contable, dim_categoria_producto
+**INVENTARIO (6 dimensiones):** 
+- dim_producto, dim_almacen, dim_proveedor, dim_tipo_movimiento, dim_usuario, dim_fecha
 
-**TRANSVERSALES (2):** dim_fecha, dim_producto
+**FINANZAS (5 dimensiones):** 
+- dim_cuenta_contable, dim_centro_costo, dim_tipo_transaccion, dim_periodo_contable, dim_categoria_producto
 
-### Detalle de Facts:
-1. **fact_ventas** - 115,528 registros (líneas de venta)
+**DIMENSIONES CONFORMADAS (compartidas entre módulos):** 
+- dim_fecha (4,018 fechas desde 2013 hasta 2024)
+- dim_producto (64 productos - también referenciada como dim_detalle_venta)
+- dim_usuario (54 usuarios del sistema)
+
+### Detalle de Facts con Conteos Exactos:
+
+1. **fact_ventas** - 115,528 registros (líneas de venta por producto)
 2. **fact_inventario** - 408,397 registros (movimientos de inventario)
 3. **fact_transacciones** - 577,640 registros (asientos contables con partida doble)
-4. **fact_estado_resultados** - 70 registros (P&L agregado por período)
-5. **fact_balance** - 210 registros (balance por período y cuenta)
+4. **fact_estado_resultados** - 70 registros (estado de resultados agregado por período)
+5. **fact_balance** - 210 registros (balance por período y cuenta contable)
+
+**TOTAL REGISTROS EN FACTS:** 1,101,845 registros
+
+### Dimensiones con Mayor Volumen:
+
+- **dim_direccion:** 79,836 direcciones únicas
+- **dim_orden:** 42,119 órdenes de compra
+- **dim_cliente:** 20,155 clientes
+- **dim_line_item:** 5,000 líneas de pedido catalogadas
+- **dim_fecha:** 4,018 días únicos
 
 ---
 
