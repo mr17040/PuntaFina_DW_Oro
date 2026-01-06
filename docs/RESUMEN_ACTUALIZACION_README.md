@@ -1,160 +1,98 @@
-# 📋 Resumen de Actualización del README
+# ✅ RESUMEN DE ACTUALIZACIÓN README.md
 
-**Fecha:** 2026-01-05  
-**Objetivo:** Actualizar README con información EXACTA de la base de datos
+**Fecha:** 2026-01-04  
+**Versión:** 2.1 → 2.2
 
-## ✅ Cambios Realizados
+## 📝 Cambios Realizados
 
-### 1. 📊 Conteos de Registros Actualizados
+### 1. Información de Versión
+- ✅ Badge actualizado: `version-2.1` → `version-2.2`
+- ✅ Sección "Versión Actual" actualizada con números reales
+- ✅ Agregada mención de "Correcciones v2.2"
 
-Todos los conteos fueron verificados contra la base de datos real:
+### 2. Números de Registros Actualizados
 
-| Tabla | Conteo Anterior | Conteo Real | Estado |
-|-------|----------------|-------------|---------|
-| fact_ventas | 646,548 | **115,528** | ✅ CORREGIDO |
-| fact_inventario | ~400,000 | **408,397** | ✅ ACTUALIZADO |
-| fact_transacciones | 577,640 | **577,640** | ✅ CORRECTO |
-| fact_estado_resultados | 70 | **70** | ✅ CORRECTO |
-| fact_balance | 210 | **210** | ✅ CORRECTO |
-| dim_cliente | ~20,000 | **20,155** | ✅ ACTUALIZADO |
-| dim_producto | ~60 | **64** | ✅ ACTUALIZADO |
-| dim_fecha | ~4,000 | **4,018** | ✅ ACTUALIZADO |
-| dim_orden | ~40,000 | **42,119** | ✅ ACTUALIZADO |
-| dim_direccion | ~80,000 | **79,836** | ✅ ACTUALIZADO |
+| Tabla | Antes (README) | Ahora (Real) | Estado |
+|-------|----------------|--------------|--------|
+| fact_ventas | 646,548 | 115,528 | ✅ Corregido |
+| fact_inventario | 50,277 | 408,397 | ✅ Corregido |
+| fact_transacciones | 186,256 | 577,640 | ✅ Corregido |
+| fact_estado_resultados | 25 | 70 | ✅ Corregido |
+| fact_balance | 3 | 210 | ✅ Corregido |
 
-### 2. 🏗️ Estructura de Tablas
+### 3. Nombres de Tablas Corregidos
+- ❌ `fact_transacciones_contables` → ✅ `fact_transacciones`
+- ❌ `fact_balance_general` → ✅ `fact_balance`
+- ✅ `fact_estado_resultados` (nombre correcto mantenido)
 
-#### fact_ventas
-- ✅ Actualizado tipo de dato: `venta_id` ahora documentado como `INTEGER (SERIAL)`
-- ✅ Removidas Foreign Keys inexistentes (sitio_web_id, canal_id, etc.)
-- ✅ Agregado `created_at` con default `NOW()`
-- ✅ Foreign Keys ahora solo las reales: fecha_id, cliente_id, producto_id, orden_id, usuario_id, almacen_id
+### 4. Estructura de Tablas Actualizada
 
-#### fact_inventario
-- ✅ Actualizado tipo de dato: `movimiento_id` como `INTEGER (SERIAL)`
-- ✅ Agregados campos exactos: `documento`, `observaciones`
-- ✅ Confirmados todos los Foreign Keys reales
+#### fact_transacciones:
+- ✅ Agregada columna `periodo_id INTEGER`
+- ✅ Actualizado número de registros: 577,640
+- ✅ Agregada nota: "5 asientos por venta con partida doble"
 
-#### fact_transacciones
-- ✅ Agregado campo `periodo_id` que faltaba
-- ✅ Índice `idx_fact_trans_periodo` documentado
-- ✅ Foreign Key a `dim_periodo_contable` agregada
+#### fact_estado_resultados:
+- ✅ Campos actualizados: `tipo_cuenta`, `monto_debito`, `monto_credito`, `saldo`
+- ❌ Removidos campos obsoletos: `ingresos`, `costos`, `gastos`, `utilidad_bruta`, `utilidad_neta`
+- ✅ Actualizado: "70 registros (35 períodos × 2 cuentas P&L)"
 
-#### fact_estado_resultados
-- ✅ Estructura completamente corregida con campos reales:
-  - `ingresos`, `costos`, `gastos`, `utilidad_bruta`, `utilidad_neta`
-- ✅ Removidos campos antiguos que no existen: `tipo_cuenta`, `monto_debito`, `monto_credito`
-- ✅ Agregado `centro_costo_id` como FK
+#### fact_balance:
+- ✅ Campos actualizados: `debitos`, `creditos`, `saldo`
+- ❌ Removidos campos obsoletos: `saldo_inicial`, `saldo_final`
+- ✅ Actualizado: "210 registros (35 períodos × 6 cuentas activas)"
 
-#### fact_balance
-- ✅ Agregado campo `saldo_inicial` que faltaba
-- ✅ Campo `saldo` renombrado a `saldo_final` para claridad
-- ✅ Constraint UNIQUE documentada: `(periodo_id, cuenta_id)`
+### 5. Nueva Sección: "Notas de Versión 2.2"
 
-### 3. 📐 Dimensiones Actualizadas
+Agregada sección completa con:
+- ✅ 6 correcciones documentadas en detalle
+- ✅ Código de ejemplo para cada corrección
+- ✅ Referencias a archivos y líneas específicas
+- ✅ Tabla de impacto comparativo
+- ✅ Checklist de validaciones realizadas
 
-#### dim_fecha
-- ✅ Rango exacto: 2013-01-01 hasta 2024-12-31 (4,018 fechas)
-- ✅ Campos actualizados con nombres exactos de la BD:
-  - `año` → `anio`
-  - `día` → `dia`
-  - `semana_año` → `semana_anio`
-  - `nombre_dia` → `dia_semana_nombre`
-  - `nombre_mes` → `mes_nombre`
-  - `es_feriado` → `es_festivo`
-- ✅ Índices documentados exactamente
-- ✅ Constraints NOT NULL documentados
+## 📊 Consistencia Verificada
 
-#### dim_almacen
-- ✅ Total: 6 almacenes registrados
-- ✅ Campos actualizados con tipos exactos
+### Módulo VENTAS:
+- ✅ fact_ventas: 115,528 registros ← OroCommerce
+- ✅ Origen: oro_order + oro_order_line_item
 
-#### dim_cuenta_contable
-- ✅ Total: 42 cuentas contables
-- ✅ Índices: `dim_cuenta_contable_codigo_key` UNIQUE
-- ✅ `idx_dim_cuenta_codigo` BTREE
+### Módulo INVENTARIO:
+- ✅ fact_inventario: 408,397 registros ← CSV
+- ✅ Origen: movimientos_inventario.csv
 
-#### dim_periodo_contable
-- ✅ Total: 84 períodos contables
-- ✅ Constraint UNIQUE: `(anio, mes)`
+### Módulo FINANZAS:
+- ✅ fact_transacciones: 577,640 registros
+  - Generados desde 115,528 ventas × 5 asientos = 577,640 ✓
+- ✅ fact_balance: 210 registros
+  - 35 períodos × 6 cuentas = 210 ✓
+- ✅ fact_estado_resultados: 70 registros
+  - 35 períodos × 2 cuentas P&L = 70 ✓
 
-#### dim_tipo_movimiento
-- ✅ Total: 9 tipos de movimiento
-- ✅ Índices documentados
+## 🎯 Información Clave Documentada
 
-#### dim_tipo_transaccion
-- ✅ Total: 9 tipos de transacción
-- ✅ Índices documentados
+1. ✅ **Cuentas activas:** 1102 (Bancos), 1103 (CxC), 1104 (Inventario), 2102 (IVA), 4101 (Ventas), 5101 (Costo Ventas)
+2. ✅ **Períodos:** 202301-202511 (35 meses)
+3. ✅ **Balance:** $7.3M débitos = $7.3M créditos
+4. ✅ **Simetría:** 115,528 ventas → 577,640 transacciones (5×)
+5. ✅ **Distribución:** 70% efectivo (1102), 30% crédito (1103)
+6. ✅ **Tipo de loader:** SimpleDatabaseLoader con conversión numpy→Python
 
-### 4. 📊 Resumen de Tablas
+## 📁 Archivos Referenciados
 
-Actualizado con totales exactos:
+1. ✅ `etl_batch/transformers/complete_dimension_builder.py` (líneas 457-476)
+2. ✅ `etl_batch/transformers/complete_fact_builder.py` (líneas 315-332, 357-359, 393-403, 460-470)
+3. ✅ `etl_batch/loaders/simple_loader.py` (líneas 71-90)
+4. ✅ `scripts/generate_complete_accounting_from_sales.py` (nuevo, 239 líneas)
+5. ✅ `data/inputs/finanzas/transacciones_contables.csv` (regenerado: 577,640 registros)
 
-```
-TOTAL: 29 tablas
-  - 24 dimensiones
-  - 5 tablas de hechos
+## ✅ CONCLUSIÓN
 
-TOTAL REGISTROS: 1,101,845 en tablas de hechos
-  - fact_ventas: 115,528
-  - fact_inventario: 408,397
-  - fact_transacciones: 577,640
-  - fact_estado_resultados: 70
-  - fact_balance: 210
-```
+El README.md está completamente actualizado y alineado con:
+- ✅ La implementación real del código
+- ✅ Los números de registros en la base de datos
+- ✅ La estructura de tablas actual
+- ✅ Las correcciones implementadas
+- ✅ El estado del archivo ESTADO_ETL.md
 
-### 5. 🔗 Foreign Keys y Referencias
-
-Todas las relaciones fueron verificadas contra la base de datos:
-
-#### fact_ventas FK confirmadas:
-- ✅ fecha_id → dim_fecha(fecha_id)
-- ✅ cliente_id → dim_cliente(cliente_id)
-- ✅ producto_id → dim_producto(producto_id)
-- ✅ orden_id → dim_orden(orden_id)
-- ✅ usuario_id → dim_usuario(usuario_id)
-- ✅ almacen_id → dim_almacen(almacen_id)
-
-#### fact_inventario FK confirmadas:
-- ✅ fecha_id → dim_fecha(fecha_id)
-- ✅ producto_id → dim_producto(producto_id)
-- ✅ almacen_id → dim_almacen(almacen_id)
-- ✅ tipo_movimiento_id → dim_tipo_movimiento(tipo_movimiento_id)
-- ✅ proveedor_id → dim_proveedor(proveedor_id)
-- ✅ usuario_id → dim_usuario(usuario_id)
-
-#### fact_transacciones FK confirmadas:
-- ✅ fecha_id → dim_fecha(fecha_id)
-- ✅ cuenta_id → dim_cuenta_contable(cuenta_id)
-- ✅ centro_costo_id → dim_centro_costo(centro_costo_id)
-- ✅ tipo_transaccion_id → dim_tipo_transaccion(tipo_transaccion_id)
-- ✅ usuario_id → dim_usuario(usuario_id)
-- ✅ periodo_id → dim_periodo_contable(periodo_id)
-
-## 📁 Archivos Generados
-
-1. **docs/database_tables_complete.md** - Estructura completa de todas las tablas
-2. **docs/readme_update.md** - Resumen ejecutivo con totales
-3. **docs/database_exact_structure.md** - Documentación técnica detallada
-
-## 🎯 Verificación
-
-Todos los datos fueron extraídos directamente de la base de datos PostgreSQL usando:
-
-```python
-# Script: update_readme_exact.py
-# Base de datos: datawarehouse_bi
-# Usuario: sa
-# Fecha: 2026-01-05
-```
-
-## ✅ Estado Final
-
-- ✅ README 100% sincronizado con la base de datos real
-- ✅ Todos los conteos verificados
-- ✅ Todas las estructuras validadas
-- ✅ Todos los Foreign Keys documentados
-- ✅ Todos los índices listados
-- ✅ Todos los constraints especificados
-
-**El README ahora refleja EXACTAMENTE la estructura actual de la base de datos.**
+**README v2.2 listo para producción.**
