@@ -1,0 +1,43 @@
+cuenta_contable_id,codigo,nombre,descripcion,tipo,categoria,nivel,cuenta_padre,activo
+1,1000,ACTIVO,Grupo principal de activos,deudora,,1,,True
+2,1100,Activo Corriente,Activos corrientes o circulantes,deudora,corriente,2,1000.0,True
+3,1101,Caja,Efectivo en caja general,deudora,corriente,3,1100.0,True
+4,1102,Bancos,Efectivo en cuentas bancarias,deudora,corriente,3,1100.0,True
+5,1103,Cuentas por Cobrar Clientes,Cuentas pendientes de cobro a clientes,deudora,corriente,3,1100.0,True
+6,1104,Inventario de Mercadería,Inventario de calzado disponible para venta,deudora,corriente,3,1100.0,True
+7,1200,Activo No Corriente,Activos de largo plazo,deudora,no_corriente,2,1000.0,True
+8,1201,Mobiliario y Equipo,Mobiliario y equipo de tiendas,deudora,no_corriente,3,1200.0,True
+9,1202,Equipo de Cómputo,Computadoras y equipos tecnológicos,deudora,no_corriente,3,1200.0,True
+10,1203,Edificios,Edificios propiedad de la empresa,deudora,no_corriente,3,1200.0,True
+11,1204,Depreciación Acumulada,Depreciación acumulada de activos fijos,acreedora,no_corriente,3,1200.0,True
+12,2000,PASIVO,Grupo principal de pasivos,acreedora,,1,,True
+13,2100,Pasivo Corriente,Pasivos de corto plazo,acreedora,corriente,2,2000.0,True
+14,2101,Cuentas por Pagar Proveedores,Cuentas pendientes de pago a proveedores,acreedora,corriente,3,2100.0,True
+15,2102,IVA por Pagar,IVA pendiente de pago al fisco,acreedora,corriente,3,2100.0,True
+16,2103,Retenciones por Pagar,Retenciones pendientes de enterar,acreedora,corriente,3,2100.0,True
+17,2200,Pasivo No Corriente,Pasivos de largo plazo,acreedora,no_corriente,2,2000.0,True
+18,2201,Préstamos Bancarios Largo Plazo,Préstamos bancarios con vencimiento mayor a 1 año,acreedora,no_corriente,3,2200.0,True
+19,3000,PATRIMONIO,Grupo principal de patrimonio,acreedora,,1,,True
+20,3101,Capital Social,Capital aportado por socios,acreedora,,2,3000.0,True
+21,3102,Utilidades Retenidas,Utilidades acumuladas de ejercicios anteriores,acreedora,,2,3000.0,True
+22,3103,Utilidad del Ejercicio,Utilidad o pérdida del período actual,acreedora,,2,3000.0,True
+23,4000,INGRESOS,Grupo principal de ingresos,acreedora,,1,,True
+24,4101,Ventas,Ingresos por ventas de calzado,acreedora,,2,4000.0,True
+25,4102,Devoluciones sobre Ventas,Devoluciones de mercadería vendida,deudora,,2,4000.0,True
+26,4103,Descuentos sobre Ventas,Descuentos otorgados sobre ventas,deudora,,2,4000.0,True
+27,5000,COSTO DE VENTAS,Grupo principal de costos,deudora,,1,,True
+28,5101,Costo de Mercadería Vendida,Costo del calzado vendido,deudora,,2,5000.0,True
+29,6000,GASTOS OPERATIVOS,Grupo principal de gastos,deudora,,1,,True
+30,6100,Gastos de Venta,Gastos relacionados con ventas,deudora,,2,6000.0,True
+31,6101,Sueldos Personal de Ventas,Salarios del personal de tiendas,deudora,,3,6100.0,True
+32,6102,Comisiones,Comisiones por ventas,deudora,,3,6100.0,True
+33,6103,Publicidad,Gastos en publicidad y marketing,deudora,,3,6100.0,True
+34,6104,Alquiler de Locales,Alquiler de tiendas físicas,deudora,,3,6100.0,True
+35,6200,Gastos de Administración,Gastos administrativos,deudora,,2,6000.0,True
+36,6201,Sueldos Personal Administrativo,Salarios del personal administrativo,deudora,,3,6200.0,True
+37,6202,Servicios Públicos,Electricidad agua teléfono internet,deudora,,3,6200.0,True
+38,6203,Papelería y Útiles,Material de oficina,deudora,,3,6200.0,True
+39,6204,Depreciación,Depreciación de activos fijos,deudora,,3,6200.0,True
+40,7000,GASTOS FINANCIEROS,Grupo de gastos financieros,deudora,,1,,True
+41,7101,Intereses Bancarios,Intereses pagados por préstamos,deudora,,2,7000.0,True
+42,7102,Comisiones Bancarias,Comisiones bancarias pagadas,deudora,,2,7000.0,True

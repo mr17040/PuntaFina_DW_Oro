@@ -175,24 +175,41 @@ class CompleteDimensionBuilder:
         return df
     
     def build_dim_sitio_web(self) -> pd.DataFrame:
-        """Construir dim_sitio_web desde oro_website"""
+        """Construir dim_sitio_web desde CSV (oro_website está vacío)"""
         logger.info("🌐 Construyendo dim_sitio_web...")
         
-        query = """
-        SELECT 
-            id as sitio_externo_id,
-            name as nombre,
-            created_at,
-            updated_at
-        FROM oro_website
-        ORDER BY id
-        """
+        try:
+            # Primero intentar desde CSV
+            csv_path = '/root/PuntaFina_DW_Oro/data/inputs/ventas/sitios_web.csv'
+            df = pd.read_csv(csv_path)
+            
+            # Renombrar columnas para match con DW
+            df = df.rename(columns={
+                'sitio_web_id': 'sitio_externo_id'
+            })
+            
+            # Agregar timestamps
+            df['created_at'] = pd.Timestamp.now()
+            df['updated_at'] = pd.Timestamp.now()
+            
+            logger.info(f"✓ dim_sitio_web: {len(df):,} registros desde CSV")
+            
+        except Exception as e:
+            logger.warning(f"No se pudo leer CSV, intentando oro_website: {e}")
+            query = """
+            SELECT 
+                id as sitio_externo_id,
+                name as nombre,
+                created_at,
+                updated_at
+            FROM oro_website
+            ORDER BY id
+            """
+            df = pd.read_sql_query(query, self.oro_conn)
+            df['url'] = 'https://puntafina.com'
+            df['activo'] = True
+            logger.info(f"✓ dim_sitio_web: {len(df):,} registros desde oro_website")
         
-        df = pd.read_sql_query(query, self.oro_conn)
-        df['url'] = 'https://puntafina.com'
-        df['activo'] = True
-        
-        logger.info(f"✓ dim_sitio_web: {len(df):,} registros desde oro_website")
         return df
     
     def build_dim_canal(self) -> pd.DataFrame:
@@ -209,17 +226,19 @@ class CompleteDimensionBuilder:
             FROM orocrm_channel
             ORDER BY id
             """
-            df = pd.read_sql_query(query, self.oro_conn)
-        except:
+            df = pd.read_sql_query(query, self.crm_conn)  # ✅ Usar crm_conn en vez de oro_conn
+            df['activo'] = df['estado'] == True
+        except Exception as e:
+            logger.warning(f"Error leyendo orocrm_channel: {e}")
             # Si no existe la tabla, crear canales por defecto
             df = pd.DataFrame({
                 'canal_externo_id': [1, 2, 3, 4],
                 'nombre': ['E-Commerce', 'Tienda Física', 'Mayorista', 'Distribuidores'],
                 'tipo': ['b2c', 'retail', 'b2b', 'wholesale'],
-                'estado': ['activo', 'activo', 'activo', 'activo']
+                'estado': [True, True, True, True]
             })
+            df['activo'] = True
         
-        df['activo'] = df['estado'] == 'activo'
         logger.info(f"✓ dim_canal: {len(df):,} registros")
         return df
     
@@ -439,23 +458,46 @@ class CompleteDimensionBuilder:
             query = """
             SELECT 
                 id as promocion_externo_id,
-                rule_label as nombre,
+                use_coupons,
                 created_at,
-                updated_at
+                updated_at,
+                rule_id,
+                discount_config_id
             FROM oro_promotion
             ORDER BY id
             """
             df = pd.read_sql_query(query, self.oro_conn)
+            
+            # Generar nombre basado en ID y tipo
             df['codigo'] = 'PROMO-' + df['promocion_externo_id'].astype(str).str.zfill(4)
-            df['descripcion'] = df['nombre']
-            df['tipo_descuento'] = 'Porcentaje'
+            df['nombre'] = df.apply(
+                lambda x: f"Promoción {'con Cupón' if x['use_coupons'] else 'Directa'} #{x['promocion_externo_id']}", 
+                axis=1
+            )
+            df['descripcion'] = df.apply(
+                lambda x: f"{'Descuento aplicable con cupón' if x['use_coupons'] else 'Descuento automático en compra'}", 
+                axis=1
+            )
+            df['tipo_descuento'] = df['use_coupons'].apply(lambda x: 'Cupón' if x else 'Directo')
             df['valor_descuento'] = 10.0
-            df['fecha_inicio'] = pd.to_datetime('2024-01-01')
-            df['fecha_fin'] = pd.to_datetime('2024-12-31')
-        except:
+            
+            # Usar created_at real para fecha_inicio
+            df['fecha_inicio'] = pd.to_datetime(df['created_at']).dt.date
+            df['fecha_fin'] = pd.to_datetime('2025-12-31')
+            
+            # Eliminar campos auxiliares
+            df = df.drop(columns=['rule_id', 'discount_config_id', 'use_coupons'])
+            
+            logger.info(f"✓ dim_promocion: {len(df):,} registros desde oro_promotion")
+            
+        except Exception as e:
+            logger.warning(f"Error construyendo promociones: {e}")
             # Si no hay promociones, crear vacío
             df = pd.DataFrame(columns=['promocion_externo_id', 'codigo', 'nombre', 'descripcion',
-                                      'tipo_descuento', 'valor_descuento', 'fecha_inicio', 'fecha_fin'])
+                                      'tipo_descuento', 'valor_descuento', 'fecha_inicio', 'fecha_fin',
+                                      'created_at', 'updated_at'])
+        
+        return df
         
         logger.info(f"✓ dim_promocion: {len(df):,} registros")
         return df

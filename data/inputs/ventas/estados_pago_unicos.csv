@@ -1,0 +1,7 @@
+estado_pago,nombre,descripcion,activo
+pending,Pendiente,Pago en proceso de validación,TRUE
+authorized,Autorizado,Autorizado pero no capturado,TRUE
+paid_in_full,Pagado,Pago completado,TRUE
+partially_paid,Pago Parcial,Pago parcial realizado,TRUE
+canceled,Cancelado,Transacción cancelada,TRUE
+failed,Fallido,Pago rechazado,TRUE

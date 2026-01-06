@@ -1,2 +1,13 @@
-id_canal,nombre,tipo,estado
-1,Canal Principal,Online,Activo
+canal_id,canal_externo_id,nombre,tipo,estado,activo
+1,1,E-commerce Website,magento,True,True
+2,2,Retail Store,custom,True,True
+3,3,B2B Portal,custom,True,True
+4,4,Call Center,custom,True,True
+5,5,Mobile App,custom,True,True
+6,6,Wholesale,custom,True,True
+7,7,Marketplace,magento,True,True
+8,8,Facebook Shop,custom,True,True
+9,9,Instagram Shop,custom,True,True
+10,10,WhatsApp Business,custom,True,True
+11,11,Corporate Sales,custom,True,True
+12,12,Distributors,custom,True,True

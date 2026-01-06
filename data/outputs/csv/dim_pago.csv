@@ -1,13 +1,11 @@
-id_pago,metodo_pago,estado_pago,descripcion,requiere_validacion,plazo_dias
-PAG001,Tarjeta de Crédito,pending,Pago en proceso de validación,True,0
-PAG002,Tarjeta de Débito,authorized,Autorizado pero no capturado,True,0
-PAG003,Efectivo,paid_in_full,Pagado completamente en efectivo,False,0
-PAG004,Transferencia Bancaria,pending,Esperando confirmación bancaria,True,2
-PAG005,PayPal,paid_in_full,Pagado a través de PayPal,False,0
-PAG006,Crédito Tienda,partially_paid,Pago parcial con crédito,False,30
-PAG007,Tarjeta de Crédito,paid_in_full,Pago completado con tarjeta,False,0
-PAG008,Contra Entrega,pending,Pago al recibir producto,False,0
-PAG009,Cheque,pending,Cheque pendiente de cobro,True,5
-PAG010,Tarjeta de Crédito,canceled,Transacción cancelada por cliente,False,0
-PAG011,PayPal,failed,Pago rechazado por fondos insuficientes,False,0
-PAG012,Transferencia Bancaria,paid_in_full,Transferencia confirmada,False,0
+pago_id,pago_externo_id,metodo_pago,procesador,tipo_pago
+1,1,Efectivo,Manual,Inmediato
+2,2,Tarjeta Crédito,Visa/MC,Inmediato
+3,3,Tarjeta Débito,Visa/MC,Inmediato
+4,4,Transferencia,Banco,Inmediato
+5,5,Cheque,Banco,Diferido
+6,6,PayPal,PayPal,Inmediato
+7,7,Stripe,Stripe,Inmediato
+8,8,Bitcoin,Blockchain,Inmediato
+9,9,Crédito 30 días,Interno,Crédito
+10,10,Crédito 60 días,Interno,Crédito

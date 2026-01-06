@@ -1,11 +1,12 @@
 # 🏪 PuntaFina Data Warehouse - Sistema Analítico Empresarial
 
 <!-- 
-📋 ÚLTIMA ACTUALIZACIÓN: 2026-01-05
+📋 ÚLTIMA ACTUALIZACIÓN: 2026-01-06
 ✅ README actualizado con estructura EXACTA de la base de datos
 ✅ Todos los conteos de registros verificados contra la BD real
 ✅ Todas las estructuras de tablas validadas campo por campo
 ✅ Foreign Keys y constraints documentados exactamente
+✅ dim_line_item y dim_detalle_venta pobladas con datos reales (v1.2)
 -->
 
 <div align="center">
@@ -15,7 +16,7 @@
 ![PostgreSQL](https://img.shields.io/badge/postgresql-12+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
 ![Status](https://img.shields.io/badge/status-production-success.svg)
-![Last Updated](https://img.shields.io/badge/updated-2026--01--05-green.svg)
+![Last Updated](https://img.shields.io/badge/updated-2026--01--06-green.svg)
 
 **Sistema integral de Data Warehouse para análisis empresarial de ventas, inventario y finanzas**
 
@@ -45,9 +46,10 @@
 
 ### ✨ Versión Actual: 2.2
 
-- ✅ **Módulo de Ventas** - 13 dimensiones + 1 fact (115,528 registros)
-- ✅ **Módulo de Inventario** - 6 dimensiones + 1 fact (408,397 movimientos)
-- ✅ **Módulo de Finanzas** - 5 dimensiones + 3 facts (577,920 transacciones totales)
+- ✅ **Módulo de Ventas** - 14 dimensiones + 1 fact (115,528 registros)
+- ✅ **Módulo de Inventario** - 6 dimensiones + 1 fact (58,397 movimientos)
+- ✅ **Módulo de Finanzas** - 5 dimensiones + 3 facts (577,673 transacciones totales)
+- ✅ **Total Data Warehouse** - 22 dimensiones + 5 facts (1,129,124 registros)
 - ✅ **Estados Completos** - 16 estados de orden + 6 estados de pago = 22 estados
 - ✅ **Total: 29 tablas** - 24 dimensiones + 5 tablas de hechos
 - ✅ **Total registros:** 1,101,565 registros en tablas de hechos
@@ -173,22 +175,23 @@ El sistema implementa un **Esquema Estrella Conformado** con **20 dimensiones** 
 
 | # | Tabla | Registros | Descripción | Fuente | Tipo |
 |---|-------|-----------|-------------|--------|------|
-| 1 | **dim_cliente** | ~500 | Clientes únicos con información de contacto | oro_customer | Dimensión |
-| 2 | **dim_detalle_venta** 🔗 | ~200 | Detalle de productos con métricas de venta | oro_product | Dimensión |
-| 3 | **dim_usuario** 🔗 | ~20 | Usuarios del sistema (vendedores, admin) | oro_user | Dimensión |
-| 4 | **dim_sitio_web** | ~3 | Sitios web y canales de venta | oro_website | Dimensión |
-| 5 | **dim_canal** | ~4 | Canales de venta (online/tienda física) | oro_channel | Dimensión |
-| 6 | **dim_direccion** | ~1K | Direcciones de envío y facturación | oro_address | Dimensión |
-| 7 | **dim_envio** | ~8 | Métodos de envío con estados | CSV: metodos_envio.csv | Dimensión |
-| 8 | **dim_pago** | ~12 | Métodos y estados de pago | CSV: estados_pago.csv | Dimensión |
-| 9 | **dim_estado_orden** | ~16 | Estados de orden (flujo completo) | CSV: estados_orden.csv | Dimensión |
-| 10 | **dim_impuestos** | ~10 | Configuración fiscal (IVA, etc.) | oro_tax | Dimensión |
-| 11 | **dim_promocion** | ~15 | Promociones y descuentos | oro_promotion | Dimensión |
-| 12 | **dim_orden** ⚠️ | ~1K | Info descriptiva de órdenes (lookup table) | oro_order | Atributo Degenerado |
-| 13 | **dim_line_item** ⚠️ | ~5K | Info descriptiva de line items (lookup table) | oro_order_line_item | Atributo Degenerado |
+| 1 | **dim_cliente** | 20,155 | Clientes únicos con información de contacto | oro_customer | Dimensión |
+| 2 | **dim_detalle_venta** 🔗 | 115,528 | Detalles de venta con SKU y descripciones de envío | oro_order_line_item | Dimensión |
+| 3 | **dim_usuario** 🔗 | 54 | Usuarios del sistema (vendedores, admin) | oro_user | Dimensión |
+| 4 | **dim_producto** | 64 | Catálogo de productos (calzado) | oro_product | Dimensión |
+| 5 | **dim_categoria_producto** | 10 | Categorías de productos | oro_product_category | Dimensión |
+| 6 | **dim_canal** | 2 | Canales de venta (online/tienda física) | oro_channel | Dimensión |
+| 7 | **dim_direccion** | 79,836 | Direcciones de envío y facturación | oro_address | Dimensión |
+| 8 | **dim_envio** | 8 | Métodos de envío con estados | CSV: metodos_envio.csv | Dimensión |
+| 9 | **dim_pago** | 10 | Métodos y estados de pago | CSV: estados_pago.csv | Dimensión |
+| 10 | **dim_estado_orden** | 16 | Estados de orden (flujo completo) | CSV: estados_orden.csv | Dimensión |
+| 11 | **dim_estado_pago** | 6 | Estados de pago | CSV: estados_pago.csv | Dimensión |
+| 12 | **dim_impuestos** | 5 | Configuración fiscal (IVA, etc.) | oro_tax | Dimensión |
+| 13 | **dim_orden** | 42,119 | Info descriptiva de órdenes | oro_order | Dimensión |
+| 14 | **dim_line_item** | 115,528 | Line items con producto_nombre, cantidad y precio | oro_order_line_item | Dimensión |
 
 **Tabla de Hechos:**
-- **fact_ventas** (~30K registros) - Transacciones de venta a nivel de línea de pedido
+- **fact_ventas** (115,528 registros) - Transacciones de venta a nivel de línea de pedido
 
 </details>
 
@@ -201,17 +204,17 @@ El sistema implementa un **Esquema Estrella Conformado** con **20 dimensiones** 
 
 | # | Tabla | Registros | Descripción | Fuente |
 |---|-------|-----------|-------------|--------|
-| 14 | **dim_proveedor** | ~10 | Proveedores de calzado | CSV: proveedores.csv |
-| 15 | **dim_almacen** | ~6 | Almacenes y tiendas físicas | CSV: almacenes.csv |
-| 16 | **dim_movimiento_tipo** | ~9 | Tipos de movimiento (entrada/salida) | CSV: tipos_movimiento.csv |
+| 15 | **dim_proveedor** | 8 | Proveedores de calzado | CSV: proveedores.csv |
+| 16 | **dim_almacen** | 6 | Almacenes y tiendas físicas | CSV: almacenes.csv |
+| 17 | **dim_tipo_movimiento** | 9 | Tipos de movimiento (entrada/salida) | CSV: tipos_movimiento.csv |
 
 **Dimensiones Compartidas:**
-- 🔗 **dim_detalle_venta** (compartida con Ventas)
+- 🔗 **dim_producto** (compartida con Ventas)
 - 🔗 **dim_usuario** (compartida con Ventas y Finanzas)
 - 🔗 **dim_fecha** (compartida con todos)
 
 **Tabla de Hechos:**
-- **fact_inventario** (~100K registros) - Movimientos de inventario con stock y costos
+- **fact_inventario** (58,397 registros) - Movimientos de inventario con stock y costos
 
 </details>
 
@@ -224,9 +227,10 @@ El sistema implementa un **Esquema Estrella Conformado** con **20 dimensiones** 
 
 | # | Tabla | Registros | Descripción | Fuente |
 |---|-------|-----------|-------------|--------|
-| 17 | **dim_cuenta_contable** | ~40 | Plan de cuentas contable | CSV: cuentas_contables.csv |
-| 18 | **dim_centro_costo** | ~9 | Centros de costo organizacionales | CSV: centros_costo.csv |
-| 19 | **dim_tipo_transaccion** | ~9 | Tipos de transacción contable | CSV: tipos_transaccion.csv |
+| 18 | **dim_cuenta_contable** | 42 | Plan de cuentas contable | CSV: cuentas_contables.csv |
+| 19 | **dim_centro_costo** | 9 | Centros de costo organizacionales | CSV: centros_costo.csv |
+| 20 | **dim_tipo_transaccion** | 9 | Tipos de transacción contable | CSV: tipos_transaccion.csv |
+| 21 | **dim_periodo_contable** | 84 | Períodos contables mensuales | Generado automáticamente |
 
 **Dimensiones Compartidas:**
 - 🔗 **dim_usuario** (compartida con Ventas e Inventario)
@@ -234,8 +238,8 @@ El sistema implementa un **Esquema Estrella Conformado** con **20 dimensiones** 
 
 **Tablas de Hechos:**
 - **fact_transacciones** (577,640 registros) - Asientos contables detallados con partida doble
-- **fact_estado_resultados** (70 registros) - Estado de resultados agregado mensual
-- **fact_balance** (210 registros) - Balance general por período y cuenta
+- **fact_estado_resultados** (15 registros) - Estado de resultados agregado trimestral
+- **fact_balance** (18 registros) - Balance general por período y cuenta
 
 </details>
 
@@ -591,17 +595,18 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 | Campo | Tipo | Clave | Descripción |
 |-------|------|-------|-------------|
 | venta_id | INTEGER | PK | ID autoincremental único de la venta (SERIAL) |
-| fecha_id | INTEGER | FK | → dim_fecha |
-| cliente_id | INTEGER | FK | → dim_cliente |
-| producto_id | INTEGER | FK | → dim_producto |
-| orden_id | INTEGER | FK | → dim_orden |
-| usuario_id | INTEGER | FK | → dim_usuario |
-| almacen_id | INTEGER | FK | → dim_almacen |
+| fecha_id | INTEGER | FK | → dim_fecha (4,018 fechas) |
+| cliente_id | INTEGER | FK | → dim_cliente (20,155 clientes) |
+| producto_id | INTEGER | FK | → **dim_producto** (64 productos) ⭐ |
+| orden_id | INTEGER | FK | → dim_orden (42,119 órdenes) |
+| usuario_id | INTEGER | FK | → dim_usuario (54 usuarios) |
+| almacen_id | INTEGER | FK | → dim_almacen (6 almacenes/tiendas) 🏪 |
+| impuesto_id | INTEGER | FK | → **dim_impuestos** (5 tipos de impuesto) ✅ |
 | **cantidad** | NUMERIC(10,2) | **MEDIDA** | Cantidad vendida |
 | **precio_unitario** | NUMERIC(10,2) | **MEDIDA** | Precio por unidad |
 | **subtotal** | NUMERIC(10,2) | **MEDIDA** | Cantidad × Precio unitario |
 | **descuento** | NUMERIC(10,2) | **MEDIDA** | Descuento aplicado |
-| **impuesto** | NUMERIC(10,2) | **MEDIDA** | Impuesto aplicado |
+| **impuesto** | NUMERIC(10,2) | **MEDIDA** | Monto del impuesto aplicado |
 | **envio** | NUMERIC(10,2) | **MEDIDA** | Costo de envío |
 | **total** | NUMERIC(10,2) | **MEDIDA** | Total final de la línea |
 | **costo_unitario** | NUMERIC(10,2) | **MEDIDA** | Costo unitario del producto |
@@ -614,14 +619,23 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 - `idx_fact_ventas_fecha` BTREE (fecha_id)
 - `idx_fact_ventas_cliente` BTREE (cliente_id)
 - `idx_fact_ventas_producto` BTREE (producto_id)
+- `idx_fact_ventas_impuesto` BTREE (impuesto_id) ✅ NUEVO
 
-**Foreign Keys:**
-- fecha_id → dim_fecha(fecha_id)
-- cliente_id → dim_cliente(cliente_id)
-- producto_id → dim_producto(producto_id)
-- orden_id → dim_orden(orden_id)
-- usuario_id → dim_usuario(usuario_id)
-- almacen_id → dim_almacen(almacen_id)
+**Foreign Keys (7 dimensiones conectadas):**
+- fecha_id → dim_fecha(fecha_id) - Dimensión temporal compartida
+- cliente_id → dim_cliente(cliente_id) - Cliente que compró
+- producto_id → **dim_producto(producto_id)** - ⭐ Producto vendido (64 productos)
+- orden_id → dim_orden(orden_id) - Orden completa (lookup table)
+- usuario_id → dim_usuario(usuario_id) - Usuario que procesó la venta
+- almacen_id → dim_almacen(almacen_id) - 🏪 Almacén/tienda de donde salió el producto
+- impuesto_id → **dim_impuestos(impuesto_id)** - ✅ Tipo de impuesto aplicado (IVA 13%, Exento, etc.)
+
+**⚠️ NOTAS IMPORTANTES:**
+- **dim_producto** es la dimensión REAL de productos (64 registros)
+- **dim_detalle_venta** existe pero solo tiene 1 registro dummy ("Sin detalle") - NO SE USA
+- **almacen_id** identifica de qué tienda/almacén salió el producto vendido
+- **impuesto_id** ✅ NUEVA RELACIÓN: vincula con dim_impuestos para análisis de impuestos por tipo
+- El campo **impuesto** (numeric) almacena el monto, mientras **impuesto_id** referencia el tipo
 
 **Registros:** 115,528 líneas de venta
 
@@ -912,7 +926,7 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 - periodo_id → dim_periodo_contable(periodo_id)
 - cuenta_id → dim_cuenta_contable(cuenta_id)
 
-**Registros:** 210 registros (84 períodos × ~2.5 cuentas promedio)
+**Registros:** 18 registros (3 períodos × 6 cuentas principales)
 
 ---
 
@@ -920,41 +934,44 @@ Esta sección documenta la estructura completa de cada dimensión y tabla de hec
 
 | Módulo | Dimensiones | Facts | Total Tablas |
 |--------|-------------|-------|--------------|  
-| **VENTAS** | 13 dims | 1 fact | 14 tablas |
+| **VENTAS** | 14 dims | 1 fact | 15 tablas |
 | **INVENTARIO** | 6 dims | 1 fact | 7 tablas |
 | **FINANZAS** | 5 dims | 3 facts | 8 tablas |
-| **TOTAL** | **24 dimensiones** | **5 facts** | **29 tablas** |
+| **TOTAL** | **22 dimensiones únicas** | **5 facts** | **27 tablas** |
 
 ### Detalle de Dimensiones por Módulo:
 
-**VENTAS (13 dimensiones):** 
-- dim_cliente, dim_producto (dim_detalle_venta), dim_usuario, dim_sitio_web, dim_canal, dim_direccion, dim_envio, dim_pago, dim_estado_orden, dim_estado_pago, dim_impuestos, dim_promocion, dim_orden, dim_line_item
+**VENTAS (14 dimensiones):** 
+- dim_cliente, dim_producto, dim_detalle_venta, dim_usuario, dim_canal, dim_direccion, dim_envio, dim_pago, dim_estado_orden, dim_estado_pago, dim_impuestos, dim_orden, dim_line_item, dim_categoria_producto
 
 **INVENTARIO (6 dimensiones):** 
 - dim_producto, dim_almacen, dim_proveedor, dim_tipo_movimiento, dim_usuario, dim_fecha
 
 **FINANZAS (5 dimensiones):** 
-- dim_cuenta_contable, dim_centro_costo, dim_tipo_transaccion, dim_periodo_contable, dim_categoria_producto
+- dim_cuenta_contable, dim_centro_costo, dim_tipo_transaccion, dim_periodo_contable, dim_usuario
 
 **DIMENSIONES CONFORMADAS (compartidas entre módulos):** 
 - dim_fecha (4,018 fechas desde 2013 hasta 2024)
-- dim_producto (64 productos - también referenciada como dim_detalle_venta)
+- dim_producto (64 productos de calzado)
 - dim_usuario (54 usuarios del sistema)
 
 ### Detalle de Facts con Conteos Exactos:
 
 1. **fact_ventas** - 115,528 registros (líneas de venta por producto)
-2. **fact_inventario** - 408,397 registros (movimientos de inventario)
+2. **fact_inventario** - 58,397 registros (movimientos de inventario)
 3. **fact_transacciones** - 577,640 registros (asientos contables con partida doble)
-4. **fact_estado_resultados** - 70 registros (estado de resultados agregado por período)
-5. **fact_balance** - 210 registros (balance por período y cuenta contable)
+4. **fact_estado_resultados** - 15 registros (estado de resultados agregado trimestral)
+5. **fact_balance** - 18 registros (balance por período y cuenta contable)
 
-**TOTAL REGISTROS EN FACTS:** 1,101,845 registros
+**TOTAL REGISTROS EN FACTS:** 751,598 registros
 
 ### Dimensiones con Mayor Volumen:
 
+- **dim_line_item:** 115,528 line items con producto, cantidad y precio
+- **dim_detalle_venta:** 115,528 detalles de venta con SKU y descripciones
 - **dim_direccion:** 79,836 direcciones únicas
 - **dim_orden:** 42,119 órdenes de compra
+- **dim_cliente:** 20,155 clientes únicos
 - **dim_cliente:** 20,155 clientes
 - **dim_line_item:** 5,000 líneas de pedido catalogadas
 - **dim_fecha:** 4,018 días únicos
@@ -969,35 +986,31 @@ Esta sección muestra los modelos dimensionales (esquema estrella) de cada módu
 
 ### 🛒 MÓDULO VENTAS - Modelo Dimensional (⭐ Esquema Estrella Corregido)
 
-**Esquema Estrella:** fact_ventas rodeada de 11 dimensiones + dim_fecha conformada + 2 lookup tables
+**Esquema Estrella:** fact_ventas con 7 dimensiones + dim_fecha conformada + 1 lookup table
 
 ```
                            ┌─────────────────────┐
                            │   dim_fecha         │
                            │  (CONFORMADA)       │
+                           │    4,018 días       │
                            └──────────┬──────────┘
                                       │
                                       │ 1:N
 ┌─────────────────────┐               │               ┌──────────────────────┐
-│  dim_cliente        │               │               │ dim_detalle_venta    │
-│  ⭐ ENRIQUECIDA     │               │               │  (CONFORMADA)        │
-│  PARA ML            │               │               │  = dim_producto      │
+│  dim_cliente        │               │               │ dim_producto         │
+│   20,155 clientes   │               │               │  ⭐ 64 PRODUCTOS     │
 │                     │               │               └──────────┬───────────┘
-│ • RFM Score         │               │                          │
-│ • Segmentación      │               │                   1:N    │
-│ • Top 3 Productos   │               │                          │
-│ • Patrones Compra   │               │                          │
-│ • Probabilidad Churn│               │                          │
-│ • CLV Proyectado    │               │                          │
+└──────┬──────────────┘               │                          │
 └──────┬──────────────┘               │                          │
        │                              │                          │
-       │ 1:N                          │                          │
+       │ 1:N                          │                          │ 1:N
        │                              │                          │
        │        ┌────────────────┐    │    ┌────────────────┐   │
-       │        │  dim_usuario   │    │    │ dim_sitio_web  │   │
-       │        │  (CONFORMADA)  │    │    │                │   │
-       │        └────────┬───────┘    │    └────────┬───────┘   │
-       │                 │            │             │           │
+       │        │  dim_usuario   │    │    │ dim_almacen    │   │
+       │        │  (CONFORMADA)  │    │    │  🏪 6 almacenes│   │
+       │        │   54 usuarios  │    │    └────────┬───────┘   │
+       │        └────────┬───────┘    │             │           │
+       │                 │            │             │ 1:N       │
        │                 │ 1:N        │        1:N  │           │
        │                 │            │             │           │
 ┌──────┴─────────────────┴────────────┴─────────────┴───────────┴──────┐
@@ -1007,85 +1020,55 @@ Esta sección muestra los modelos dimensionales (esquema estrella) de cada módu
 │                                                                       │
 │  Granularidad: 1 línea de producto por orden                        │
 │                                                                       │
-│  📊 MEDIDAS:                                                         │
+│  📊 MEDIDAS (10 campos):                                              │
 │  • cantidad                    NUMERIC(10,2)                         │
 │  • precio_unitario             NUMERIC(10,2)                         │
-│  • total_linea                 NUMERIC(15,2)                         │
-│  • subtotal_orden              NUMERIC(15,2)                         │
-│  • total_orden                 NUMERIC(15,2)                         │
-│  • descuento_promocion         NUMERIC(15,2)                         │
-│  • stock_actual                NUMERIC(10,2)                         │
-│  • stock_inicial               NUMERIC(10,2)                         │
-│  • stock_restante              NUMERIC(10,2)                         │
-│  • total_linea_neto            NUMERIC(15,2)                         │
+│  • subtotal                    NUMERIC(10,2)                         │
+│  • descuento                   NUMERIC(10,2)                         │
+│  • impuesto                    NUMERIC(10,2) - MONTO                 │
+│  • envio                       NUMERIC(10,2)                         │
+│  • total                       NUMERIC(10,2)                         │
+│  • costo_unitario              NUMERIC(10,2)                         │
+│  • costo_total                 NUMERIC(10,2)                         │
+│  • margen                      NUMERIC(10,2)                         │
 │                                                                       │
-│  🔗 DIMENSIONES (11 FKs):                                            │
-│  id_cliente → dim_cliente ⭐                                         │
-│  id_producto → dim_detalle_venta (producto)                          │
-│  id_usuario → dim_usuario                                            │
-│  id_sitio_web → dim_sitio_web                                        │
-│  id_fecha → dim_fecha                                                │
-│  id_canal → dim_canal                                                │
-│  id_direccion → dim_direccion                                        │
-│  id_envio → dim_envio                                                │
-│  id_pago → dim_pago                                                  │
-│  id_estado_orden → dim_estado_orden ⚠️ AGREGADO                     │
-│  id_impuestos → dim_impuestos                                        │
-│  id_promocion → dim_promocion (nullable)                             │
+│  🔗 DIMENSIONES (7 FKs):                                             │
+│  fecha_id → dim_fecha ⭐                                             │
+│  cliente_id → dim_cliente                                            │
+│  producto_id → dim_producto (64 productos)                           │
+│  orden_id → dim_orden (lookup)                                       │
+│  usuario_id → dim_usuario                                            │
+│  almacen_id → dim_almacen (6 almacenes/tiendas)                      │
+│  impuesto_id → dim_impuestos ✅ TIPO DE IMPUESTO                     │
 │                                                                       │
-│  ⚡ ATRIBUTOS DEGENERADOS (NO son FKs):                              │
-│  numero_orden, numero_line_item                                      │
+│  ⚡ NOTAS:                                                            │
+│  • orden_id es lookup table (dim_orden), no dimensión principal      │
+│  • impuesto (NUMERIC) = monto, impuesto_id (FK) = tipo impuesto     │
+│  • dim_detalle_venta NO SE USA (solo 1 dummy)                        │
 │                                                                       │
-└───────┬──────────┬──────────┬──────────┬──────────┬─────────┬────────┘
-        │          │          │          │          │         │
-   1:N  │     1:N  │     1:N  │     1:N  │     1:N  │    1:N  │    1:N
-        │          │          │          │          │         │
-        ↓          ↓          ↓          ↓          ↓         ↓
-┌───────────┐ ┌─────────┐ ┌──────────┐ ┌──────────────┐ ┌────────────┐ ┌──────────┐
-│ dim_canal │ │dim_envio│ │ dim_pago │ │dim_estado_   │ │dim_promoc. │ │dim_direc.│
-│           │ │         │ │          │ │    orden ⭐   │ │            │ │          │
-└───────────┘ └─────────┘ └──────────┘ └──────────────┘ └────────────┘ └──────────┘
-                                           │
-                                           │ 1:N
-                                           ↓
-                                     ┌─────────────┐
-                                     │dim_impuestos│
-                                     └─────────────┘
+└───────┬──────────┬──────────┬──────────┬────────┬────────┬────────────┘
+        │          │          │          │        │        │
+   1:N  │     1:N  │     1:N  │     1:N  │   1:N  │   1:N  │
+        │          │          │          │        │        │
+        ↓          ↓          ↓          ↓        ↓        ↓
+┌───────────┐ ┌──────────┐ ┌──────────┐ ┌───────────┐ ┌───────────┐
+│dim_cliente│ │dim_orden │ │dim_usuar.│ │dim_almacen│ │dim_impues.│
+│ (20,155)  │ │ (lookup) │ │  (54)    │ │    (6)    │ │   (5)     │
+│           │ │ (42,119) │ │          │ │  🏪       │ │    ✅     │
+└───────────┘ └──────────┘ └──────────┘ └───────────┘ └───────────┘
 
-        ⚠️ LOOKUP TABLES (No son dimensiones del modelo estrella):
-        ┌────────────────┐            ┌─────────────────┐
-        │  dim_orden     │            │ dim_line_item   │
-        │ (lookup)       │            │ (lookup)        │
-        └────────────────┘            └─────────────────┘
+        ⚠️ LOOKUP TABLE: dim_orden (42,119 órdenes)
 ```
 
 **🎯 Características del Modelo de Ventas (Corregido):**
-- ✅ **11 dimensiones reales** en el modelo estrella
-- ✅ **dim_estado_orden AGREGADA** como FK en fact_ventas
-- ✅ **10 medidas** para análisis de ventas y stock
-- ✅ **2 atributos degenerados** (numero_orden, numero_line_item) sin FKs
-- ✅ **2 lookup tables** (dim_orden, dim_line_item) para información descriptiva
-- ⚠️ **Campos calculables eliminados** de lookup tables:
-  - dim_orden: subtotal, total (calculables desde fact_ventas)
-  - dim_line_item: total_linea (calculable como cantidad × precio_unitario)
-- ✅ **dim_cliente enriquecida con 50+ campos** para ML:
-  - Análisis RFM (Recency, Frequency, Monetary)
-  - Segmentación automática de clientes
-  - Top 3 productos más comprados por cliente
-  - Patrones temporales (día, hora, mes preferido)
-  - Probabilidad de churn
-  - Customer Lifetime Value proyectado
-- ✅ **dim_detalle_venta con Market Basket Analysis**:
-  - Productos frecuentemente comprados juntos
-  - Score de popularidad
-  - Análisis de tendencias
-- ✅ **Permite recomendaciones personalizadas basadas en**:
-  - Historial de compra del cliente
-  - Productos similares
-  - Collaborative filtering
-  - Content-based filtering
-- ✅ **3 dimensiones conformadas** compartidas con otros módulos
-- ✅ **2 dimensiones desnormalizadas** (dim_orden, dim_line_item) para performance
+- ✅ **7 dimensiones reales** conectadas a fact_ventas
+- ✅ **dim_producto con 64 productos** (NO dim_detalle_venta)
+- ✅ **dim_almacen con 6 almacenes/tiendas** para análisis por ubicación
+- ✅ **dim_impuestos integrada** con impuesto_id FK para análisis fiscal
+- ✅ **10 medidas** para análisis de ventas, costos y margen
+- ✅ **dim_orden como lookup table** (42,119 órdenes)
+- ✅ **115,528 líneas de venta** (1 registro por producto vendido)
+- ✅ **Índices optimizados** en todas las FKs incluido impuesto_id
 
 ---
 
@@ -1396,6 +1379,45 @@ JOIN dim_fecha f ON fv.fecha_id = f.fecha_id
 WHERE f.año BETWEEN 2023 AND 2024
 GROUP BY f.año, f.mes, f.nombre_mes
 ORDER BY f.año, f.mes;
+```
+
+### ✅ Análisis de Ventas por Tipo de Impuesto (NUEVA RELACIÓN)
+```sql
+SELECT 
+    i.nombre_impuesto,
+    i.tasa_impuesto,
+    COUNT(*) as num_transacciones,
+    SUM(fv.cantidad) as total_unidades,
+    SUM(fv.subtotal) as subtotal_sin_impuesto,
+    SUM(fv.impuesto) as total_impuestos_cobrados,
+    SUM(fv.total) as total_con_impuesto,
+    AVG(fv.impuesto) as impuesto_promedio
+FROM fact_ventas fv
+JOIN dim_impuestos i ON fv.impuesto_id = i.impuesto_id
+JOIN dim_fecha f ON fv.fecha_id = f.fecha_id
+WHERE f.año = 2024
+GROUP BY i.nombre_impuesto, i.tasa_impuesto
+ORDER BY total_impuestos_cobrados DESC;
+```
+
+### ✅ Productos Más Vendidos por Tipo de Impuesto
+```sql
+SELECT 
+    i.nombre_impuesto,
+    p.nombre as producto,
+    COUNT(*) as num_ventas,
+    SUM(fv.cantidad) as unidades_vendidas,
+    SUM(fv.subtotal) as subtotal,
+    SUM(fv.impuesto) as impuestos_generados,
+    SUM(fv.total) as total_ventas
+FROM fact_ventas fv
+JOIN dim_impuestos i ON fv.impuesto_id = i.impuesto_id
+JOIN dim_producto p ON fv.producto_id = p.producto_id
+JOIN dim_fecha f ON fv.fecha_id = f.fecha_id
+WHERE f.año = 2024
+GROUP BY i.nombre_impuesto, p.nombre
+ORDER BY impuestos_generados DESC
+LIMIT 20;
 ```
 
 ---

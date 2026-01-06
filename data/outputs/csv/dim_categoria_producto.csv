@@ -1,0 +1,11 @@
+categoria_producto_id,categoria_externo_id,codigo,nombre,descripcion,categoria_padre_id,nivel,activo
+1,1,CAT001,Calzado Deportivo,Zapatillas deportivas,,1,True
+2,2,CAT002,Calzado Casual,Zapatos casuales,,1,True
+3,3,CAT003,Calzado Formal,Zapatos formales,,1,True
+4,4,CAT004,Botas,Botas diversas,,1,True
+5,5,CAT005,Sandalias,Sandalias verano,,1,True
+6,6,CAT006,Zapatos de Niño,Calzado infantil,,1,True
+7,7,CAT007,Zapatos de Mujer,Calzado femenino,,1,True
+8,8,CAT008,Zapatos de Hombre,Calzado masculino,,1,True
+9,9,CAT009,Accesorios,Accesorios varios,,1,True
+10,10,CAT010,Otros,Otros productos,,1,True

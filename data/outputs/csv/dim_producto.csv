@@ -1,0 +1,65 @@
+producto_id,producto_externo_id,sku,nombre,tipo,created_at,updated_at,activo,descripcion,categoria,marca,unidad_medida,precio_base,costo_estandar
+1,1,0RT28,Sandalias Deportivas Acuáticas,simple,2025-10-05 04:18:37,2025-10-05 04:19:18,True,Sandalias Deportivas Acuáticas,Calzado,Sandalias,Pieza,0.0,0.0
+2,2,1AB92,Botas Trabajo Punta Acero Seguridad,simple,2025-10-05 04:18:38,2025-10-05 04:19:19,True,Botas Trabajo Punta Acero Seguridad,Calzado,Botas,Pieza,0.0,0.0
+3,3,1GB82,Calzado Gym Training Multisport,simple,2025-10-05 04:18:38,2025-10-05 04:19:18,True,Calzado Gym Training Multisport,Calzado,Calzado,Pieza,0.0,0.0
+4,4,1GS46,Zapatillas Tenis Premium Leather,simple,2025-10-05 04:18:38,2025-10-05 04:19:18,True,Zapatillas Tenis Premium Leather,Calzado,Zapatillas,Pieza,0.0,0.0
+5,5,1TB10,Botas Invierno Térmicas Impermeables,simple,2025-10-05 04:18:39,2025-10-05 04:19:19,True,Botas Invierno Térmicas Impermeables,Calzado,Botas,Pieza,0.0,0.0
+6,6,2CF67,Botas Lluvia Impermeables Pro,simple,2025-10-05 04:18:39,2025-10-05 04:19:18,True,Botas Lluvia Impermeables Pro,Calzado,Botas,Pieza,0.0,0.0
+7,7,2JD29,Calzado Natación Acuático Grip,simple,2025-10-05 04:18:39,2025-10-05 04:19:18,True,Calzado Natación Acuático Grip,Calzado,Calzado,Pieza,0.0,0.0
+8,8,2JD90,Calzado Boxing Botín Competencia,simple,2025-10-05 04:18:39,2025-10-05 04:19:18,True,Calzado Boxing Botín Competencia,Calzado,Calzado,Pieza,0.0,0.0
+9,9,2JV62,Sandalias Ortopédicas Soporte Arco,simple,2025-10-05 04:18:39,2025-10-05 04:19:18,True,Sandalias Ortopédicas Soporte Arco,Calzado,Sandalias,Pieza,0.0,0.0
+10,10,2LM04,Botas Casual Chukka Ante,simple,2025-10-05 04:18:39,2025-10-05 04:19:19,True,Botas Casual Chukka Ante,Calzado,Botas,Pieza,0.0,0.0
+11,11,2RW93,Zapatillas Slip-On Casual Relax,simple,2025-10-05 04:18:39,2025-10-05 04:19:19,True,Zapatillas Slip-On Casual Relax,Calzado,Zapatillas,Pieza,0.0,0.0
+12,12,2TK59,Sandalias Gladiador Fashion Mujer,simple,2025-10-05 04:18:39,2025-10-05 04:19:18,True,Sandalias Gladiador Fashion Mujer,Calzado,Sandalias,Pieza,0.0,0.0
+13,13,2WE71,Tacones Stiletto Mujer Elegantes,simple,2025-10-05 04:18:39,2025-10-05 04:19:19,True,Tacones Stiletto Mujer Elegantes,Calzado,Tacones,Pieza,0.0,0.0
+14,14,3ET67,Zapatos Loafer Borlas Ejecutivos,simple,2025-10-05 04:18:40,2025-10-05 04:19:19,True,Zapatos Loafer Borlas Ejecutivos,Calzado,Zapatos,Pieza,0.0,0.0
+15,15,3JK76,Sandalias Cuero Artesanales Premium,simple,2025-10-05 04:18:40,2025-10-05 04:19:18,True,Sandalias Cuero Artesanales Premium,Calzado,Sandalias,Pieza,0.0,0.0
+16,16,3JK90,Calzado Golf Waterproof Premium,simple,2025-10-05 04:18:40,2025-10-05 04:19:19,True,Calzado Golf Waterproof Premium,Calzado,Calzado,Pieza,0.0,0.0
+17,17,3LV37,Zapatillas Running Ligeras Performance,simple,2025-10-05 04:18:40,2025-10-05 04:19:18,True,Zapatillas Running Ligeras Performance,Calzado,Zapatillas,Pieza,0.0,0.0
+18,18,3RE23,Botas Motociclista Protección Total,simple,2025-10-05 04:18:40,2025-10-05 04:19:18,True,Botas Motociclista Protección Total,Calzado,Botas,Pieza,0.0,0.0
+19,19,3TU20,Zapatos Oxford Mujer Profesionales,simple,2025-10-05 04:18:40,2025-10-05 04:19:18,True,Zapatos Oxford Mujer Profesionales,Calzado,Zapatos,Pieza,0.0,0.0
+20,20,3UK92,Zapatillas Casual Canvas Juveniles,simple,2025-10-05 04:18:40,2025-10-05 04:19:18,True,Zapatillas Casual Canvas Juveniles,Calzado,Zapatillas,Pieza,0.0,0.0
+21,21,3YB32,Sandalias Plataforma Mujer Elegantes,simple,2025-10-05 04:18:40,2025-10-05 04:19:18,True,Sandalias Plataforma Mujer Elegantes,Calzado,Sandalias,Pieza,0.0,0.0
+22,22,4HC51,Zapatillas Running Trail Mountain,simple,2025-10-05 04:18:40,2025-10-05 04:19:18,True,Zapatillas Running Trail Mountain,Calzado,Zapatillas,Pieza,0.0,0.0
+23,23,4HJ92,Zapatos Salón Tacón Medio Oficina,simple,2025-10-05 04:18:41,2025-10-05 04:19:19,True,Zapatos Salón Tacón Medio Oficina,Calzado,Zapatos,Pieza,0.0,0.0
+24,24,4KL66,Botas Senderismo Trail Explorer,simple,2025-10-05 04:18:41,2025-10-05 04:19:18,True,Botas Senderismo Trail Explorer,Calzado,Botas,Pieza,0.0,0.0
+25,25,4PJ19,Zapatos Mocasín Elegantes Sin Cordón,simple,2025-10-05 04:18:41,2025-10-05 04:19:19,True,Zapatos Mocasín Elegantes Sin Cordón,Calzado,Zapatos,Pieza,0.0,0.0
+26,26,4QI22,Botas Fashion Urbanas Mujer,simple,2025-10-05 04:18:41,2025-10-05 04:19:18,True,Botas Fashion Urbanas Mujer,Calzado,Botas,Pieza,0.0,0.0
+27,27,5BM69,Zapatillas Deportivas Running Pro,simple,2025-10-05 04:18:41,2025-10-05 04:19:19,True,Zapatillas Deportivas Running Pro,Calzado,Zapatillas,Pieza,0.0,0.0
+28,28,5GE27,Sandalias Playa Flip-Flop Confort,simple,2025-10-05 04:18:41,2025-10-05 04:19:19,True,Sandalias Playa Flip-Flop Confort,Calzado,Sandalias,Pieza,0.0,0.0
+29,29,5GF68,Calzado Fútbol Tacos Profesionales,simple,2025-10-05 04:18:41,2025-10-05 04:19:18,True,Calzado Fútbol Tacos Profesionales,Calzado,Calzado,Pieza,0.0,0.0
+30,30,5GN30,Botas Montaña Hiking Adventure,simple,2025-10-05 04:18:41,2025-10-05 04:19:18,True,Botas Montaña Hiking Adventure,Calzado,Botas,Pieza,0.0,0.0
+31,31,5IF41,Sandalias Tipo Huarache Tradicionales,simple,2025-10-05 04:18:41,2025-10-05 04:19:18,True,Sandalias Tipo Huarache Tradicionales,Calzado,Sandalias,Pieza,0.0,0.0
+32,32,5TJ23,Zapatos Oxford Piel Ejecutivos,simple,2025-10-05 04:18:42,2025-10-05 04:19:19,True,Zapatos Oxford Piel Ejecutivos,Calzado,Zapatos,Pieza,0.0,0.0
+33,33,5TU10,Sandalias Sport Outdoor Trekking,simple,2025-10-05 04:18:42,2025-10-05 04:19:18,True,Sandalias Sport Outdoor Trekking,Calzado,Sandalias,Pieza,0.0,0.0
+34,34,5UB78,Zapatillas Skate Urban Style,simple,2025-10-05 04:18:42,2025-10-05 04:19:19,True,Zapatillas Skate Urban Style,Calzado,Zapatillas,Pieza,0.0,0.0
+35,35,5XY10,Zapatos Tipo Brogue Premium Cuero,simple,2025-10-05 04:18:42,2025-10-05 04:19:19,True,Zapatos Tipo Brogue Premium Cuero,Calzado,Zapatos,Pieza,0.0,0.0
+36,36,6BC45,Sandalias Playa Niños Coloridas,simple,2025-10-05 04:18:42,2025-10-05 04:19:18,True,Sandalias Playa Niños Coloridas,Calzado,Sandalias,Pieza,0.0,0.0
+37,37,6GH85,Calzado Ciclismo Clips Performance,simple,2025-10-05 04:18:42,2025-10-05 04:19:19,True,Calzado Ciclismo Clips Performance,Calzado,Calzado,Pieza,0.0,0.0
+38,38,6LJ54,Botas de Trabajo Industrial Reforzadas,simple,2025-10-05 04:18:42,2025-10-05 04:19:18,True,Botas de Trabajo Industrial Reforzadas,Calzado,Botas,Pieza,0.0,0.0
+39,39,6PM40,Tacones Plataforma Fiesta Mujer,simple,2025-10-05 04:18:42,2025-10-05 04:19:19,True,Tacones Plataforma Fiesta Mujer,Calzado,Tacones,Pieza,0.0,0.0
+40,40,6UB33,Calzado Volleyball Indoor Pro,simple,2025-10-05 04:18:42,2025-10-05 04:19:18,True,Calzado Volleyball Indoor Pro,Calzado,Calzado,Pieza,0.0,0.0
+41,41,6UK81,Zapatillas Tenis Clásicas Blancas,simple,2025-10-05 04:18:43,2025-10-05 04:19:18,True,Zapatillas Tenis Clásicas Blancas,Calzado,Zapatillas,Pieza,0.0,0.0
+42,42,6VC22,Sandalias Casual Verano Acolchadas,simple,2025-10-05 04:18:43,2025-10-05 04:19:19,True,Sandalias Casual Verano Acolchadas,Calzado,Sandalias,Pieza,0.0,0.0
+43,43,7BS71,Zapatos Derby Clásicos Oficina,simple,2025-10-05 04:18:43,2025-10-05 04:19:19,True,Zapatos Derby Clásicos Oficina,Calzado,Zapatos,Pieza,0.0,0.0
+44,44,7BS72,Zapatillas Training CrossFit Elite,simple,2025-10-05 04:18:43,2025-10-05 04:19:18,True,Zapatillas Training CrossFit Elite,Calzado,Zapatillas,Pieza,0.0,0.0
+45,45,7NM98,Sandalias Slides Confort Unisex,simple,2025-10-05 04:18:43,2025-10-05 04:19:18,True,Sandalias Slides Confort Unisex,Calzado,Sandalias,Pieza,0.0,0.0
+46,46,7NQ22,Zapatos Piel Charol Eventos Formales,simple,2025-10-05 04:18:43,2025-10-05 04:19:19,True,Zapatos Piel Charol Eventos Formales,Calzado,Zapatos,Pieza,0.0,0.0
+47,47,7TY55,Zapatillas Walking Confort Plus,simple,2025-10-05 04:18:43,2025-10-05 04:19:19,True,Zapatillas Walking Confort Plus,Calzado,Zapatillas,Pieza,0.0,0.0
+48,48,7YV41,Calzado Tenis Clay Court Especial,simple,2025-10-05 04:18:43,2025-10-05 04:19:18,True,Calzado Tenis Clay Court Especial,Calzado,Calzado,Pieza,0.0,0.0
+49,49,8BC37,Zapatillas Basketball High Top,simple,2025-10-05 04:18:44,2025-10-05 04:19:18,True,Zapatillas Basketball High Top,Calzado,Zapatillas,Pieza,0.0,0.0
+50,50,8DO33,Botas Chelsea Casual Premium,simple,2025-10-05 04:18:44,2025-10-05 04:19:19,True,Botas Chelsea Casual Premium,Calzado,Botas,Pieza,0.0,0.0
+51,51,8LG34,Botas Militares Tácticas Combat,simple,2025-10-05 04:18:44,2025-10-05 04:19:19,True,Botas Militares Tácticas Combat,Calzado,Botas,Pieza,0.0,0.0
+52,52,8NN54,Botas Vaqueras Western Clásicas,simple,2025-10-05 04:18:44,2025-10-05 04:19:18,True,Botas Vaqueras Western Clásicas,Calzado,Botas,Pieza,0.0,0.0
+53,53,8TF72,Zapatos Penny Loafer Clásicos,simple,2025-10-05 04:18:44,2025-10-05 04:19:18,True,Zapatos Penny Loafer Clásicos,Calzado,Zapatos,Pieza,0.0,0.0
+54,54,8UF78,Zapatillas Casual Urbanas Confort,simple,2025-10-05 04:18:44,2025-10-05 04:19:18,True,Zapatillas Casual Urbanas Confort,Calzado,Zapatillas,Pieza,0.0,0.0
+55,55,8VS71,Zapatillas Lifestyle Urban Street,simple,2025-10-05 04:18:44,2025-10-05 04:19:19,True,Zapatillas Lifestyle Urban Street,Calzado,Zapatillas,Pieza,0.0,0.0
+56,56,9GQ28,Zapatos Monk Strap Doble Hebilla,simple,2025-10-05 04:18:44,2025-10-05 04:19:19,True,Zapatos Monk Strap Doble Hebilla,Calzado,Zapatos,Pieza,0.0,0.0
+57,57,9OK21,Sandalias Deportivas Acuáticas,simple,2025-10-05 04:18:45,2025-10-05 04:19:18,True,Sandalias Deportivas Acuáticas,Calzado,Sandalias,Pieza,0.0,0.0
+58,58,9OL25,Botas Trabajo Punta Acero Seguridad,simple,2025-10-05 04:18:45,2025-10-05 04:19:19,True,Botas Trabajo Punta Acero Seguridad,Calzado,Botas,Pieza,0.0,0.0
+59,59,XS56,Calzado Gym Training Multisport,simple,2025-10-05 04:18:45,2025-10-05 04:19:19,True,Calzado Gym Training Multisport,Calzado,Calzado,Pieza,0.0,0.0
+60,60,WLCH1,Zapatillas Tenis Premium Leather,simple,2025-10-05 04:18:45,2025-10-05 04:19:19,True,Zapatillas Tenis Premium Leather,Calzado,Zapatillas,Pieza,0.0,0.0
+61,61,TAG1,Botas Invierno Térmicas Impermeables,simple,2025-10-05 04:18:45,2025-10-05 04:19:19,True,Botas Invierno Térmicas Impermeables,Calzado,Botas,Pieza,0.0,0.0
+62,62,TAG2,Botas Lluvia Impermeables Pro,simple,2025-10-05 04:18:45,2025-10-05 04:19:19,True,Botas Lluvia Impermeables Pro,Calzado,Botas,Pieza,0.0,0.0
+63,63,TAG3,Calzado Natación Acuático Grip,simple,2025-10-05 04:18:45,2025-10-05 04:19:19,True,Calzado Natación Acuático Grip,Calzado,Calzado,Pieza,0.0,0.0
+64,64,2EW02,Calzado Boxing Botín Competencia,kit,2025-10-05 04:19:23,2025-10-05 04:19:29,True,Calzado Boxing Botín Competencia,Calzado,Calzado,Pieza,0.0,0.0

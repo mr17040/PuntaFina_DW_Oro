@@ -487,7 +487,7 @@ class CompleteFactBuilder:
         logger.info("📊 Construyendo fact_balance...")
         
         # Primero intentar cargar desde CSV
-        csv_path = ROOT / 'data' / 'inputs' / 'fact_balance.csv'
+        csv_path = ROOT / 'data' / 'inputs' / 'balance.csv'
         if csv_path.exists():
             logger.info(f"   📂 Cargando desde CSV: {csv_path}")
             try:
@@ -598,7 +598,7 @@ class CompleteFactBuilder:
         logger.info("📈 Construyendo fact_estado_resultados...")
         
         # Primero intentar cargar desde CSV
-        csv_path = ROOT / 'data' / 'inputs' / 'fact_estado_resultados.csv'
+        csv_path = ROOT / 'data' / 'inputs' / 'estado_resultados.csv'
         if csv_path.exists():
             logger.info(f"   📂 Cargando desde CSV: {csv_path}")
             try:

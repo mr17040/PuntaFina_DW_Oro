@@ -1,0 +1,6 @@
+impuesto_id,codigo,nombre,tasa,tipo,activo
+1,IVA,IVA 13%,0.13,ventas,TRUE
+2,ISR,ISR,0.25,renta,TRUE
+3,IMPCONS,Impuesto al Consumo,0.15,especial,TRUE
+4,IMPADVAL,Ad Valorem,0.05,importación,TRUE
+5,EXENTO,Exento,0.00,exento,TRUE

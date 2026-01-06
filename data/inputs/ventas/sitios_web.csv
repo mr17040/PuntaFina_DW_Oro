@@ -1,0 +1,7 @@
+sitio_web_id,nombre,url,tipo,activo
+1,PuntaFina Online,https://www.puntafina.com,ecommerce,true
+2,Tienda San Salvador Centro,Presencial - Centro Comercial,tienda_fisica,true
+3,Tienda Santa Ana,Presencial - Santa Ana,tienda_fisica,true
+4,Tienda San Miguel,Presencial - San Miguel,tienda_fisica,true
+5,Tienda Sonsonate,Presencial - Sonsonate,tienda_fisica,true
+6,Tienda La Libertad,Presencial - La Libertad,tienda_fisica,true

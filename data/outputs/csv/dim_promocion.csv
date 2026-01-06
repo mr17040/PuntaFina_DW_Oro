@@ -1,8 +1,7 @@
-id_promocion,nombre_promocion,descripcion,descuento_monto,tipo_descuento,estado
-1,Promoción 1,Promoción con cupón,0.0,fixed,Activa
-2,Promoción 2,Promoción directa,0.0,fixed,Activa
-3,Promoción 3,Promoción directa,0.0,fixed,Activa
-4,Promoción 4,Promoción directa,0.0,fixed,Activa
-5,Promoción 5,Promoción con cupón,0.0,fixed,Activa
-6,Promoción 6,Promoción con cupón,0.0,fixed,Activa
-SIN_PROMO,Sin Promoción,Sin promoción aplicada,0.0,none,Activa
+promocion_id,promocion_externo_id,created_at,updated_at,codigo,nombre,descripcion,tipo_descuento,valor_descuento,fecha_inicio,fecha_fin
+1,1,2025-10-05 04:20:18,2025-10-05 04:20:18,PROMO-0001,Promoción con Cupón #1,Descuento aplicable con cupón,Cupón,10.0,2025-10-05,2025-12-31
+2,2,2025-10-05 04:20:18,2025-10-05 04:20:18,PROMO-0002,Promoción Directa #2,Descuento automático en compra,Directo,10.0,2025-10-05,2025-12-31
+3,3,2025-10-05 04:20:18,2025-10-05 04:20:18,PROMO-0003,Promoción Directa #3,Descuento automático en compra,Directo,10.0,2025-10-05,2025-12-31
+4,4,2025-10-05 04:20:18,2025-10-05 04:20:18,PROMO-0004,Promoción Directa #4,Descuento automático en compra,Directo,10.0,2025-10-05,2025-12-31
+5,5,2025-10-28 02:53:23,2025-10-28 02:53:23,PROMO-0005,Promoción con Cupón #5,Descuento aplicable con cupón,Cupón,10.0,2025-10-28,2025-12-31
+6,6,2025-10-28 02:57:23,2025-10-28 02:57:23,PROMO-0006,Promoción con Cupón #6,Descuento aplicable con cupón,Cupón,10.0,2025-10-28,2025-12-31

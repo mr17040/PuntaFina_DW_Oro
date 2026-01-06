@@ -1,0 +1,7 @@
+estado_pago_id,codigo,nombre,descripcion,activo
+1,pending,Pendiente,Pago en proceso de validación,True
+2,authorized,Autorizado,Autorizado pero no capturado,True
+3,paid_in_full,Pagado,Pago completado,True
+4,partially_paid,Pago Parcial,Pago parcial realizado,True
+5,canceled,Cancelado,Transacción cancelada,True
+6,failed,Fallido,Pago rechazado,True

@@ -345,6 +345,7 @@ CREATE TABLE fact_ventas (
     orden_id INTEGER REFERENCES dim_orden(orden_id),
     usuario_id INTEGER REFERENCES dim_usuario(usuario_id),
     almacen_id INTEGER REFERENCES dim_almacen(almacen_id),
+    impuesto_id INTEGER REFERENCES dim_impuestos(impuesto_id),
     
     -- Medidas
     cantidad DECIMAL(10,2),
@@ -364,6 +365,7 @@ CREATE TABLE fact_ventas (
 CREATE INDEX idx_fact_ventas_fecha ON fact_ventas(fecha_id);
 CREATE INDEX idx_fact_ventas_cliente ON fact_ventas(cliente_id);
 CREATE INDEX idx_fact_ventas_producto ON fact_ventas(producto_id);
+CREATE INDEX idx_fact_ventas_impuesto ON fact_ventas(impuesto_id);
 
 CREATE TABLE fact_inventario (
     movimiento_id SERIAL PRIMARY KEY,

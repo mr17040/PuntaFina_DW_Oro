@@ -1,0 +1,10 @@
+tipo_movimiento_id,id_tipo_movimiento,nombre_tipo,categoria,afecta_stock,descripcion
+1,MOV_ENTRADA,Entrada por Compra,entrada,suma,Entrada de mercadería por compra a proveedor
+2,MOV_SALIDA_VENTA,Salida por Venta,salida,resta,Salida de mercadería por venta a cliente
+3,MOV_DEVOLUCION_CLIENTE,Devolución de Cliente,entrada,suma,Devolución de mercadería por parte del cliente
+4,MOV_DEVOLUCION_PROVEEDOR,Devolución a Proveedor,salida,resta,Devolución de mercadería al proveedor
+5,MOV_AJUSTE_POSITIVO,Ajuste Positivo,ajuste,suma,Ajuste positivo por inventario físico mayor al sistema
+6,MOV_AJUSTE_NEGATIVO,Ajuste Negativo,ajuste,resta,Ajuste negativo por inventario físico menor al sistema
+7,MOV_TRASLADO_ENTRADA,Traslado Entrada,entrada,suma,Entrada por traslado desde otro almacén
+8,MOV_TRASLADO_SALIDA,Traslado Salida,salida,resta,Salida por traslado hacia otro almacén
+9,MOV_MERMA,Merma o Pérdida,salida,resta,Pérdida de mercadería por daño o robo

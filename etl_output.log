@@ -1,0 +1,269 @@
+nohup: ignoring input
+================================================================================
+                  PUNTAFINA ETL BATCH - EJECUCIÓN COMPLETA
+================================================================================
+
+✓ Cargando variables de entorno...
+
+🔍 Verificando conexiones a bases de datos...
+   ✓ Conexión a OroCommerce OK
+   ✓ Conexión a Data Warehouse OK
+
+🚀 Iniciando ETL batch...
+
+2026-01-05 03:03:25,187 - ETLOrchestrator - INFO - 🚀 Orquestador ETL inicializado
+2026-01-05 03:03:25,188 - ETLOrchestrator - INFO - ================================================================================
+2026-01-05 03:03:25,189 - ETLOrchestrator - INFO - 🏪 PUNTAFINA ETL BATCH - PROCESO COMPLETO
+2026-01-05 03:03:25,189 - ETLOrchestrator - INFO - ================================================================================
+2026-01-05 03:03:25,189 - ETLOrchestrator - INFO - 
+🧹 FASE 0: LIMPIEZA DE ESTRUCTURA
+2026-01-05 03:03:25,214 - ETLOrchestrator - INFO -    ✓ Eliminada tabla obsoleta: dim_sitio_web
+2026-01-05 03:03:25,215 - ETLOrchestrator - INFO -    ✓ Eliminada tabla obsoleta: dim_canal
+2026-01-05 03:03:25,216 - ETLOrchestrator - INFO -    ✓ Eliminada tabla obsoleta: dim_direccion
+2026-01-05 03:03:25,217 - ETLOrchestrator - INFO -    ✓ Eliminada tabla obsoleta: dim_envio
+2026-01-05 03:03:25,217 - ETLOrchestrator - INFO -    ✓ Eliminada tabla obsoleta: dim_pago
+2026-01-05 03:03:25,218 - ETLOrchestrator - INFO -    ✓ Eliminada tabla obsoleta: dim_promocion
+2026-01-05 03:03:25,219 - ETLOrchestrator - INFO -    ✓ Eliminada tabla obsoleta: dim_line_item
+2026-01-05 03:03:25,219 - ETLOrchestrator - INFO -    ✓ Eliminada tabla obsoleta: dim_estado_orden
+2026-01-05 03:03:25,220 - ETLOrchestrator - INFO -    ✓ Eliminada tabla obsoleta: dim_estado_pago
+2026-01-05 03:03:25,220 - ETLOrchestrator - INFO -    ✓ Eliminada tabla obsoleta: dim_periodo_contable
+2026-01-05 03:03:25,221 - ETLOrchestrator - INFO -    ✓ Eliminada tabla obsoleta: dim_categoria_producto
+2026-01-05 03:03:25,236 - ETLOrchestrator - INFO -    ✅ Limpieza de estructura completada
+2026-01-05 03:03:25,237 - ETLOrchestrator - INFO - 
+📥 FASE 1: EXTRACCIÓN
+2026-01-05 03:03:25,237 - ETLOrchestrator - INFO -    📊 Extrayendo de OroCommerce...
+/root/PuntaFina_DW_Oro/etl_batch/extractors/database_extractor.py:38: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql_query(query, conn)
+/root/PuntaFina_DW_Oro/etl_batch/extractors/database_extractor.py:38: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql_query(query, conn)
+/root/PuntaFina_DW_Oro/etl_batch/extractors/database_extractor.py:38: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql_query(query, conn)
+/root/PuntaFina_DW_Oro/etl_batch/extractors/database_extractor.py:38: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql_query(query, conn)
+2026-01-05 03:03:54,921 - ETLOrchestrator - INFO -       ✓ 1,197,422 registros
+2026-01-05 03:03:54,974 - ETLOrchestrator - INFO -    📊 Extrayendo de OroCRM...
+/root/PuntaFina_DW_Oro/etl_batch/extractors/database_extractor.py:62: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql_query(query, conn)
+2026-01-05 03:03:55,100 - ETLOrchestrator - INFO -       ✓ 12 registros
+2026-01-05 03:03:55,100 - ETLOrchestrator - INFO -    📁 Extrayendo de archivos CSV...
+2026-01-05 03:03:58,821 - ETLOrchestrator - INFO -       ✓ 636,156 registros
+2026-01-05 03:03:58,824 - ETLOrchestrator - INFO - 
+   ✅ Extracción completada: 1,833,590 registros totales
+2026-01-05 03:04:03,439 - ETLOrchestrator - INFO - 
+🔄 FASE 2: TRANSFORMACIÓN - DIMENSIONES
+2026-01-05 03:04:03,440 - ETLOrchestrator - INFO -    🔨 Construyendo dim_fecha...
+2026-01-05 03:04:04,444 - ETLOrchestrator - INFO -       ✓ 4,018 registros
+2026-01-05 03:04:04,444 - ETLOrchestrator - INFO -    🔨 Construyendo dim_detalle_venta...
+Dimensión dim_detalle_venta no implementada en CompleteDimensionBuilder
+2026-01-05 03:04:04,452 - ETLOrchestrator - INFO -       ✓ 0 registros
+2026-01-05 03:04:04,452 - ETLOrchestrator - INFO -    🔨 Construyendo dim_usuario...
+/root/PuntaFina_DW_Oro/etl_batch/transformers/complete_dimension_builder.py:118: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql_query(query, self.oro_conn)
+2026-01-05 03:04:04,576 - ETLOrchestrator - INFO -       ✓ 54 registros
+2026-01-05 03:04:04,577 - ETLOrchestrator - INFO - 
+   📦 Módulo: ventas
+2026-01-05 03:04:04,577 - ETLOrchestrator - INFO -       🔨 Construyendo dim_cliente...
+/root/PuntaFina_DW_Oro/etl_batch/transformers/complete_dimension_builder.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql_query(query, self.oro_conn)
+2026-01-05 03:04:05,322 - ETLOrchestrator - INFO -          ✓ 20,155 registros
+2026-01-05 03:04:05,323 - ETLOrchestrator - INFO -       🔨 Construyendo dim_producto...
+/root/PuntaFina_DW_Oro/etl_batch/transformers/complete_dimension_builder.py:139: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql_query(query, self.oro_conn)
+2026-01-05 03:04:05,425 - ETLOrchestrator - INFO -          ✓ 64 registros
+2026-01-05 03:04:05,426 - ETLOrchestrator - INFO -       🔨 Construyendo dim_orden...
+/root/PuntaFina_DW_Oro/etl_batch/transformers/complete_dimension_builder.py:264: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql_query(query, self.oro_conn)
+2026-01-05 03:04:07,007 - ETLOrchestrator - INFO -          ✓ 42,119 registros
+2026-01-05 03:04:07,008 - ETLOrchestrator - INFO -       🔨 Construyendo dim_impuestos...
+2026-01-05 03:04:07,048 - ETLOrchestrator - INFO -          ✓ 5 registros
+2026-01-05 03:04:07,049 - ETLOrchestrator - INFO - 
+   📦 Módulo: inventario
+2026-01-05 03:04:07,049 - ETLOrchestrator - INFO -       🔨 Construyendo dim_almacen...
+2026-01-05 03:04:07,061 - ETLOrchestrator - INFO -          ✓ 6 registros
+2026-01-05 03:04:07,062 - ETLOrchestrator - INFO -       🔨 Construyendo dim_proveedor...
+2026-01-05 03:04:07,082 - ETLOrchestrator - INFO -          ✓ 8 registros
+2026-01-05 03:04:07,082 - ETLOrchestrator - INFO -       🔨 Construyendo dim_tipo_movimiento...
+2026-01-05 03:04:07,097 - ETLOrchestrator - INFO -          ✓ 9 registros
+2026-01-05 03:04:07,097 - ETLOrchestrator - INFO - 
+   📦 Módulo: finanzas
+2026-01-05 03:04:07,098 - ETLOrchestrator - INFO -       🔨 Construyendo dim_cuenta_contable...
+2026-01-05 03:04:07,156 - ETLOrchestrator - INFO -          ✓ 42 registros
+2026-01-05 03:04:07,156 - ETLOrchestrator - INFO -       🔨 Construyendo dim_centro_costo...
+2026-01-05 03:04:07,179 - ETLOrchestrator - INFO -          ✓ 9 registros
+2026-01-05 03:04:07,179 - ETLOrchestrator - INFO -       🔨 Construyendo dim_tipo_transaccion...
+2026-01-05 03:04:07,197 - ETLOrchestrator - INFO -          ✓ 9 registros
+2026-01-05 03:04:07,197 - ETLOrchestrator - INFO -       🔨 Construyendo dim_periodo_contable...
+2026-01-05 03:04:07,372 - ETLOrchestrator - INFO -          ✓ 84 registros
+2026-01-05 03:04:07,372 - ETLOrchestrator - INFO - 
+   ✅ Dimensiones completadas: 66,582 registros totales
+2026-01-05 03:04:07,373 - ETLOrchestrator - INFO - 
+🔄 FASE 3: TRANSFORMACIÓN - TABLAS DE HECHOS
+2026-01-05 03:04:07,373 - ETLOrchestrator - INFO -    🏗️  Construyendo fact_ventas...
+2026-01-05 03:08:30,026 - ETLOrchestrator - ERROR -       ✗ Error: SSL connection has been closed unexpectedly
+
+2026-01-05 03:08:30,027 - ETLOrchestrator - INFO -    🏗️  Construyendo fact_inventario...
+/root/PuntaFina_DW_Oro/etl_batch/transformers/complete_fact_builder.py:281: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  dim_producto = pd.read_sql_query(query_producto, self.dw_conn)
+2026-01-05 03:08:31,814 - ETLOrchestrator - ERROR -       ✗ Error: connection already closed
+2026-01-05 03:08:31,817 - ETLOrchestrator - INFO -    🏗️  Construyendo fact_transacciones...
+/root/PuntaFina_DW_Oro/etl_batch/transformers/complete_fact_builder.py:359: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  dim_cuenta = pd.read_sql_query(query_cuenta, self.dw_conn)
+2026-01-05 03:08:46,609 - ETLOrchestrator - ERROR -       ✗ Error: connection already closed
+2026-01-05 03:08:46,633 - ETLOrchestrator - INFO -    🏗️  Construyendo fact_balance...
+/root/PuntaFina_DW_Oro/etl_batch/transformers/complete_fact_builder.py:428: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql_query(query, self.dw_conn)
+❌ Error construyendo fact_balance: connection already closed
+Traceback (most recent call last):
+  File "/root/PuntaFina_DW_Oro/etl_batch/transformers/complete_fact_builder.py", line 428, in build_fact_balance
+    df = pd.read_sql_query(query, self.dw_conn)
+  File "/usr/local/lib/python3.10/dist-packages/pandas/io/sql.py", line 528, in read_sql_query
+    return pandas_sql.read_query(
+  File "/usr/local/lib/python3.10/dist-packages/pandas/io/sql.py", line 2728, in read_query
+    cursor = self.execute(sql, params)
+  File "/usr/local/lib/python3.10/dist-packages/pandas/io/sql.py", line 2662, in execute
+    cur = self.con.cursor()
+psycopg2.InterfaceError: connection already closed
+2026-01-05 03:08:46,651 - ETLOrchestrator - INFO -       ✓ 0 registros
+2026-01-05 03:08:46,652 - ETLOrchestrator - INFO -    🏗️  Construyendo fact_estado_resultados...
+/root/PuntaFina_DW_Oro/etl_batch/transformers/complete_fact_builder.py:493: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql_query(query, self.dw_conn)
+❌ Error construyendo fact_estado_resultados: connection already closed
+Traceback (most recent call last):
+  File "/root/PuntaFina_DW_Oro/etl_batch/transformers/complete_fact_builder.py", line 493, in build_fact_estado_resultados
+    df = pd.read_sql_query(query, self.dw_conn)
+  File "/usr/local/lib/python3.10/dist-packages/pandas/io/sql.py", line 528, in read_sql_query
+    return pandas_sql.read_query(
+  File "/usr/local/lib/python3.10/dist-packages/pandas/io/sql.py", line 2728, in read_query
+    cursor = self.execute(sql, params)
+  File "/usr/local/lib/python3.10/dist-packages/pandas/io/sql.py", line 2662, in execute
+    cur = self.con.cursor()
+psycopg2.InterfaceError: connection already closed
+2026-01-05 03:08:46,664 - ETLOrchestrator - INFO -       ✓ 0 registros
+2026-01-05 03:08:46,664 - ETLOrchestrator - INFO - 
+   ✅ Facts completadas: 0 registros totales
+2026-01-05 03:08:46,664 - ETLOrchestrator - INFO - 
+📤 FASE 4: CARGA
+2026-01-05 03:08:46,665 - ETLOrchestrator - INFO -    🚛 Cargando dimensiones...
+2026-01-05 03:08:46,668 - ETLOrchestrator - INFO -       📤 dim_tipo_transaccion...
+2026-01-05 03:08:46,943 - ETLOrchestrator - INFO -          ✓ 9 registros
+2026-01-05 03:08:46,943 - ETLOrchestrator - INFO -       📤 dim_almacen...
+2026-01-05 03:08:47,025 - ETLOrchestrator - INFO -          ✓ 6 registros
+2026-01-05 03:08:47,026 - ETLOrchestrator - INFO -       📤 dim_fecha...
+2026-01-05 03:08:47,524 - ETLOrchestrator - INFO -          ✓ 4,018 registros
+2026-01-05 03:08:47,525 - ETLOrchestrator - INFO -       📤 dim_promocion...
+2026-01-05 03:08:47,571 - ETLOrchestrator - ERROR -          ✗ Error: relation "dim_promocion" does not exist
+
+2026-01-05 03:08:47,572 - ETLOrchestrator - INFO -       📤 dim_cuenta_contable...
+2026-01-05 03:08:47,651 - ETLOrchestrator - INFO -          ✓ 42 registros
+2026-01-05 03:08:47,652 - ETLOrchestrator - INFO -       📤 dim_periodo_contable...
+2026-01-05 03:08:47,686 - ETLOrchestrator - ERROR -          ✗ Error: relation "dim_periodo_contable" does not exist
+
+2026-01-05 03:08:47,690 - ETLOrchestrator - INFO -       📤 dim_usuario...
+2026-01-05 03:08:47,781 - ETLOrchestrator - INFO -          ✓ 54 registros
+2026-01-05 03:08:47,782 - ETLOrchestrator - INFO -       📤 dim_envio...
+2026-01-05 03:08:47,821 - ETLOrchestrator - ERROR -          ✗ Error: relation "dim_envio" does not exist
+
+2026-01-05 03:08:47,827 - ETLOrchestrator - INFO -       📤 dim_line_item...
+2026-01-05 03:08:48,146 - ETLOrchestrator - ERROR -          ✗ Error: relation "dim_line_item" does not exist
+
+2026-01-05 03:08:48,154 - ETLOrchestrator - INFO -       📤 dim_tipo_movimiento...
+2026-01-05 03:08:48,219 - ETLOrchestrator - INFO -          ✓ 9 registros
+2026-01-05 03:08:48,219 - ETLOrchestrator - INFO -       📤 dim_pago...
+2026-01-05 03:08:48,261 - ETLOrchestrator - ERROR -          ✗ Error: relation "dim_pago" does not exist
+
+2026-01-05 03:08:48,262 - ETLOrchestrator - INFO -       📤 dim_direccion...
+2026-01-05 03:08:48,411 - ETLOrchestrator - ERROR -          ✗ Error: relation "dim_direccion" does not exist
+
+2026-01-05 03:08:48,426 - ETLOrchestrator - INFO -       📤 dim_centro_costo...
+2026-01-05 03:08:48,524 - ETLOrchestrator - INFO -          ✓ 9 registros
+2026-01-05 03:08:48,525 - ETLOrchestrator - INFO -       📤 dim_detalle_venta...
+2026-01-05 03:08:48,528 - ETLOrchestrator - INFO -          ✓ 0 registros
+2026-01-05 03:08:48,535 - ETLOrchestrator - INFO -       📤 dim_orden...
+2026-01-05 03:08:50,911 - ETLOrchestrator - INFO -          ✓ 42,119 registros
+2026-01-05 03:08:50,912 - ETLOrchestrator - INFO -       📤 dim_producto...
+2026-01-05 03:08:50,997 - ETLOrchestrator - INFO -          ✓ 64 registros
+2026-01-05 03:08:50,998 - ETLOrchestrator - INFO -       📤 dim_sitio_web...
+2026-01-05 03:08:51,035 - ETLOrchestrator - ERROR -          ✗ Error: relation "dim_sitio_web" does not exist
+
+2026-01-05 03:08:51,035 - ETLOrchestrator - INFO -       📤 dim_proveedor...
+2026-01-05 03:08:51,095 - ETLOrchestrator - INFO -          ✓ 8 registros
+2026-01-05 03:08:51,096 - ETLOrchestrator - INFO -       📤 dim_estado_orden...
+2026-01-05 03:08:51,135 - ETLOrchestrator - ERROR -          ✗ Error: relation "dim_estado_orden" does not exist
+
+2026-01-05 03:08:51,136 - ETLOrchestrator - INFO -       📤 dim_canal...
+2026-01-05 03:08:51,171 - ETLOrchestrator - ERROR -          ✗ Error: relation "dim_canal" does not exist
+
+2026-01-05 03:08:51,171 - ETLOrchestrator - INFO -       📤 dim_impuestos...
+2026-01-05 03:08:51,222 - ETLOrchestrator - INFO -          ✓ 5 registros
+2026-01-05 03:08:51,223 - ETLOrchestrator - INFO -       📤 dim_cliente...
+2026-01-05 03:08:53,563 - ETLOrchestrator - INFO -          ✓ 20,155 registros
+2026-01-05 03:08:53,564 - ETLOrchestrator - INFO - 
+   🚛 Cargando tablas de hechos...
+2026-01-05 03:08:53,565 - ETLOrchestrator - INFO -       📤 fact_ventas...
+2026-01-05 03:08:53,565 - ETLOrchestrator - INFO -          ✓ 0 registros
+2026-01-05 03:08:53,568 - ETLOrchestrator - INFO -       📤 fact_estado_resultados...
+2026-01-05 03:08:53,572 - ETLOrchestrator - INFO -          ✓ 0 registros
+2026-01-05 03:08:53,573 - ETLOrchestrator - INFO -       📤 fact_inventario...
+2026-01-05 03:08:55,777 - ETLOrchestrator - ERROR -          ✗ Error: insert or update on table "fact_inventario" violates foreign key constraint "fact_inventario_producto_id_fkey"
+DETAIL:  Key (producto_id)=(2) is not present in table "dim_producto".
+
+2026-01-05 03:08:55,952 - ETLOrchestrator - INFO -       📤 fact_transacciones...
+2026-01-05 03:08:59,305 - ETLOrchestrator - ERROR -          ✗ Error: insert or update on table "fact_transacciones" violates foreign key constraint "fact_transacciones_cuenta_id_fkey"
+DETAIL:  Key (cuenta_id)=(4) is not present in table "dim_cuenta_contable".
+
+2026-01-05 03:08:59,482 - ETLOrchestrator - INFO -       📤 fact_balance...
+2026-01-05 03:08:59,494 - ETLOrchestrator - INFO -          ✓ 0 registros
+2026-01-05 03:08:59,495 - ETLOrchestrator - INFO - 
+   ✅ Carga completada: 66,498 registros totales
+2026-01-05 03:08:59,496 - ETLOrchestrator - INFO - 
+✅ FASE 5: VALIDACIÓN FINAL
+2026-01-05 03:08:59,498 - ETLOrchestrator - INFO -    🔍 Verificando integridad de datos...
+2026-01-05 03:08:59,499 - ETLOrchestrator - INFO -       ✓ Integridad verificada
+2026-01-05 03:08:59,502 - ETLOrchestrator - INFO - 
+================================================================================
+2026-01-05 03:08:59,502 - ETLOrchestrator - INFO - 📊 RESUMEN FINAL DEL PROCESO ETL
+2026-01-05 03:08:59,503 - ETLOrchestrator - INFO - ================================================================================
+2026-01-05 03:08:59,503 - ETLOrchestrator - INFO - 
+⏱️  Tiempo total: 334.31 segundos
+2026-01-05 03:08:59,503 - ETLOrchestrator - INFO - ✅ Estado: success
+2026-01-05 03:08:59,504 - ETLOrchestrator - INFO - 
+📥 Extracción:
+2026-01-05 03:08:59,505 - ETLOrchestrator - INFO -    Total registros: 1,833,590
+2026-01-05 03:08:59,506 - ETLOrchestrator - INFO - 
+🔄 Transformación:
+2026-01-05 03:08:59,506 - ETLOrchestrator - INFO -    Dimensiones: 14
+2026-01-05 03:08:59,507 - ETLOrchestrator - INFO -    Facts: 2
+2026-01-05 03:08:59,507 - ETLOrchestrator - INFO -    Total registros: 66,582
+2026-01-05 03:08:59,508 - ETLOrchestrator - INFO - 
+📤 Carga:
+2026-01-05 03:08:59,508 - ETLOrchestrator - INFO -    Tablas: 16
+2026-01-05 03:08:59,509 - ETLOrchestrator - INFO -    Total registros: 66,498
+2026-01-05 03:08:59,509 - ETLOrchestrator - WARNING - 
+⚠️  Errores encontrados:
+2026-01-05 03:08:59,510 - ETLOrchestrator - WARNING -    {'fact_ventas': 'SSL connection has been closed unexpectedly\n'}
+2026-01-05 03:08:59,510 - ETLOrchestrator - WARNING -    {'fact_inventario': 'connection already closed'}
+2026-01-05 03:08:59,511 - ETLOrchestrator - WARNING -    {'fact_transacciones': 'connection already closed'}
+2026-01-05 03:08:59,511 - ETLOrchestrator - WARNING -    {'dim_promocion': 'relation "dim_promocion" does not exist\n'}
+2026-01-05 03:08:59,511 - ETLOrchestrator - WARNING -    {'dim_periodo_contable': 'relation "dim_periodo_contable" does not exist\n'}
+2026-01-05 03:08:59,511 - ETLOrchestrator - WARNING -    {'dim_envio': 'relation "dim_envio" does not exist\n'}
+2026-01-05 03:08:59,512 - ETLOrchestrator - WARNING -    {'dim_line_item': 'relation "dim_line_item" does not exist\n'}
+2026-01-05 03:08:59,513 - ETLOrchestrator - WARNING -    {'dim_pago': 'relation "dim_pago" does not exist\n'}
+2026-01-05 03:08:59,513 - ETLOrchestrator - WARNING -    {'dim_direccion': 'relation "dim_direccion" does not exist\n'}
+2026-01-05 03:08:59,513 - ETLOrchestrator - WARNING -    {'dim_sitio_web': 'relation "dim_sitio_web" does not exist\n'}
+2026-01-05 03:08:59,514 - ETLOrchestrator - WARNING -    {'dim_estado_orden': 'relation "dim_estado_orden" does not exist\n'}
+2026-01-05 03:08:59,514 - ETLOrchestrator - WARNING -    {'dim_canal': 'relation "dim_canal" does not exist\n'}
+2026-01-05 03:08:59,514 - ETLOrchestrator - WARNING -    {'fact_inventario': 'insert or update on table "fact_inventario" violates foreign key constraint "fact_inventario_producto_id_fkey"\nDETAIL:  Key (producto_id)=(2) is not present in table "dim_producto".\n'}
+2026-01-05 03:08:59,515 - ETLOrchestrator - WARNING -    {'fact_transacciones': 'insert or update on table "fact_transacciones" violates foreign key constraint "fact_transacciones_cuenta_id_fkey"\nDETAIL:  Key (cuenta_id)=(4) is not present in table "dim_cuenta_contable".\n'}
+2026-01-05 03:08:59,515 - ETLOrchestrator - INFO - 
+================================================================================
+
+================================================================================
+✅ ETL COMPLETADO
+================================================================================
+
+📊 RESUMEN DE TABLAS:
+ fact_ventas: 0 registros
+
+
+✅ Para ver detalles ejecuta: psql -h localhost -U sa -d datawarehouse_bi
+
