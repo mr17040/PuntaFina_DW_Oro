@@ -91,6 +91,247 @@ PuntaFina_DW_Oro/
 
 ## 🗄️ Modelo de Datos - Star Schema
 
+### 🎯 Diagrama de Arquitectura Completa
+
+```
+═══════════════════════════════════════════════════════════════════════════════
+                         FUENTES DE DATOS
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  OroCommerce (localhost:5432/orocommerce)                                   │
+│  ├─ oro_customer (20,155 registros) ────────────► dim_cliente              │
+│  ├─ oro_product (64 registros) ─────────────────► dim_producto             │
+│  ├─ oro_order (42,119 registros) ───────────────► dim_orden                │
+│  ├─ oro_user (54 registros) ────────────────────► dim_usuario              │
+│  ├─ oro_order_line_item (115,528) ──────────────┬► dim_line_item           │
+│  │                                               ├► dim_detalle_venta       │
+│  │                                               └► fact_ventas             │
+│  ├─ oro_order_address (79,836) ─────────────────► dim_direccion            │
+│  └─ oro_promotion (6 registros) ────────────────► dim_promocion            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  OroCRM (localhost:5432/oro_crm)                                            │
+│  └─ orocrm_channel (12 registros) ──────────────► dim_canal                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  CSVs - Finanzas (data/inputs/finanzas/)                                   │
+│  ├─ transacciones_contables.csv (577,640) ──────► fact_transacciones       │
+│  ├─ cuentas_contables.csv (42) ─────────────────► dim_cuenta_contable      │
+│  ├─ centros_costo.csv (9) ──────────────────────► dim_centro_costo         │
+│  └─ tipos_transaccion.csv (9) ──────────────────► dim_tipo_transaccion     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  CSVs - Inventario (data/inputs/inventario/)                               │
+│  ├─ movimientos_inventario.csv (58,397) ────────► fact_inventario          │
+│  ├─ almacenes.csv (6) ──────────────────────────► dim_almacen              │
+│  ├─ proveedores.csv (8) ────────────────────────► dim_proveedor            │
+│  └─ tipos_movimiento.csv (9) ───────────────────► dim_tipo_movimiento      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  CSVs - Ventas (data/inputs/ventas/)                                       │
+│  ├─ sitios_web.csv (6) ─────────────────────────► dim_sitio_web            │
+│  ├─ impuestos.csv (5) ──────────────────────────► dim_impuestos            │
+│  ├─ estados_orden.csv (16) ─────────────────────► dim_estado_orden         │
+│  ├─ estados_pago.csv (6) ───────────────────────► dim_estado_pago          │
+│  ├─ metodos_envio.csv (8) ──────────────────────► dim_envio               │
+│  ├─ metodos_pago.csv (10) ──────────────────────► dim_pago                 │
+│  └─ categorias_producto.csv (10) ───────────────► dim_categoria_producto   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  CSVs - Facts Sintetizados (data/inputs/)                                  │
+│  ├─ balance.csv (18) ───────────────────────────► fact_balance             │
+│  └─ estado_resultados.csv (15) ─────────────────► fact_estado_resultados   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+```
+
+### 🌟 Diagrama Modelo Estrella - Módulo Ventas
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ dim_fecha   │     │ dim_cliente │     │ dim_producto│     │ dim_usuario │
+│             │     │             │     │             │     │             │
+│ PK: id      │     │ PK: id      │     │ PK: id      │     │ PK: id      │
+│ 4,018 regs  │     │ 20,155 regs │     │ 64 regs     │     │ 54 regs     │
+└──────┬──────┘     └──────┬──────┘     └──────┬──────┘     └──────┬──────┘
+       │                   │                   │                   │
+       │                   │                   │                   │
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│dim_sitio_web│     │  dim_canal  │     │ dim_direccion│    │  dim_envio  │
+│             │     │             │     │             │     │             │
+│ PK: id      │     │ PK: id      │     │ PK: id      │     │ PK: id      │
+│ 6 regs      │     │ 12 regs     │     │ 79,836 regs │     │ 8 regs      │
+└──────┬──────┘     └──────┬──────┘     └──────┬──────┘     └──────┬──────┘
+       │                   │                   │                   │
+       │                   │                   │                   │
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  dim_pago   │     │dim_impuestos│     │dim_promocion│     │  dim_orden  │
+│             │     │             │     │             │     │             │
+│ PK: id      │     │ PK: id      │     │ PK: id      │     │ PK: id      │
+│ 10 regs     │     │ 5 regs      │     │ 6 regs      │     │ 42,119 regs │
+└──────┬──────┘     └──────┬──────┘     └──────┬──────┘     └──────┬──────┘
+       │                   │                   │                   │
+       │                   │                   │                   │
+┌─────────────┐     ┌──────────────┐    ┌──────────────┐    ┌─────────────┐
+│dim_line_item│     │dim_estado_   │    │dim_categoria_│    │dim_detalle_ │
+│             │     │   orden      │    │  producto    │    │   venta     │
+│ PK: id      │     │ PK: id       │    │ PK: id       │    │ PK: id      │
+│ 115,528 regs│     │ 16 regs      │    │ 10 regs      │    │ 115,528 regs│
+└──────┬──────┘     └──────┬───────┘    └──────┬───────┘    └──────┬──────┘
+       │                   │                   │                   │
+       │                   │                   │                   │
+       └───────────────────┴───────────────────┴───────────────────┘
+                                   │
+                      ┌────────────▼────────────┐
+                      │    fact_ventas          │
+                      │                         │
+                      │ 115,528 registros       │
+                      │                         │
+                      │ Métricas:               │
+                      │ - cantidad              │
+                      │ - precio_unitario       │
+                      │ - subtotal              │
+                      │ - descuento             │
+                      │ - impuesto              │
+                      │ - total                 │
+                      │ - costo                 │
+                      │ - margen                │
+                      └─────────────────────────┘
+```
+
+### 🏪 Diagrama Modelo Estrella - Módulo Inventario
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ dim_fecha   │     │ dim_producto│     │ dim_almacen │     │ dim_usuario │
+│ (compartida)│     │ (compartida)│     │             │     │ (compartida)│
+│ PK: id      │     │ PK: id      │     │ PK: id      │     │ PK: id      │
+│ 4,018 regs  │     │ 64 regs     │     │ 6 regs      │     │ 54 regs     │
+└──────┬──────┘     └──────┬──────┘     └──────┬──────┘     └──────┬──────┘
+       │                   │                   │                   │
+       │                   │                   │                   │
+       │            ┌──────────────┐    ┌──────────────┐          │
+       │            │dim_proveedor │    │dim_tipo_     │          │
+       │            │              │    │  movimiento  │          │
+       │            │ PK: id       │    │ PK: id       │          │
+       │            │ 8 regs       │    │ 9 regs       │          │
+       │            └──────┬───────┘    └──────┬───────┘          │
+       │                   │                   │                  │
+       └───────────────────┴───────────────────┴──────────────────┘
+                                   │
+                      ┌────────────▼────────────┐
+                      │  fact_inventario        │
+                      │                         │
+                      │ 58,397 registros        │
+                      │                         │
+                      │ Métricas:               │
+                      │ - cantidad              │
+                      │ - costo_unitario        │
+                      │ - costo_total           │
+                      │ - stock_anterior        │
+                      │ - stock_resultante      │
+                      │                         │
+                      │ Tipos de movimiento:    │
+                      │ - Entrada               │
+                      │ - Salida                │
+                      │ - Ajuste                │
+                      │ - Traslado              │
+                      └─────────────────────────┘
+```
+
+### 💰 Diagrama Modelo Estrella - Módulo Finanzas
+
+```
+┌─────────────┐     ┌──────────────┐    ┌──────────────┐    ┌─────────────┐
+│ dim_fecha   │     │dim_cuenta_   │    │dim_centro_   │    │ dim_usuario │
+│ (compartida)│     │  contable    │    │   costo      │    │ (compartida)│
+│ PK: id      │     │ PK: id       │    │ PK: id       │    │ PK: id      │
+│ 4,018 regs  │     │ 42 regs      │    │ 9 regs       │    │ 54 regs     │
+└──────┬──────┘     └──────┬───────┘    └──────┬───────┘    └──────┬──────┘
+       │                   │                   │                   │
+       │                   │                   │                   │
+       │            ┌──────────────┐    ┌──────────────┐          │
+       │            │dim_periodo_  │    │dim_tipo_     │          │
+       │            │  contable    │    │ transaccion  │          │
+       │            │ PK: id       │    │ PK: id       │          │
+       │            │ 84 regs      │    │ 9 regs       │          │
+       │            └──────┬───────┘    └──────┬───────┘          │
+       │                   │                   │                  │
+       └───────────────────┴───────────────────┴──────────────────┘
+                                   │
+              ┌────────────────────┼────────────────────┐
+              │                    │                    │
+  ┌───────────▼──────────┐ ┌───────▼──────────┐ ┌──────▼─────────┐
+  │ fact_transacciones   │ │  fact_balance    │ │ fact_estado_   │
+  │                      │ │                  │ │  resultados    │
+  │ 577,640 registros    │ │ 18 registros     │ │ 15 registros   │
+  │                      │ │                  │ │                │
+  │ Métricas:            │ │ Métricas:        │ │ Métricas:      │
+  │ - monto_debito       │ │ - saldo_inicial  │ │ - ingresos     │
+  │ - monto_credito      │ │ - debitos        │ │ - costos       │
+  │ - saldo              │ │ - creditos       │ │ - gastos       │
+  │                      │ │ - saldo_final    │ │ - utilidad     │
+  │ Tipos:               │ │                  │ │                │
+  │ - Asientos diarios   │ │ Por período      │ │ Por período    │
+  │ - Balance en línea   │ │ YYYYMM format    │ │ YYYYMM format  │
+  └──────────────────────┘ └──────────────────┘ └────────────────┘
+```
+
+### 🔗 Dimensiones Conformadas (Compartidas)
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                    DIMENSIONES CONFORMADAS                         │
+│  (Compartidas entre múltiples módulos para análisis integrado)     │
+└────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────┐
+  │   dim_fecha     │
+  │                 │
+  │ 4,018 registros │
+  │ 2019-01-01 a    │
+  │ 2030-12-31      │
+  └────────┬────────┘
+           │
+           ├──────────► VENTAS (fact_ventas)
+           ├──────────► INVENTARIO (fact_inventario)
+           ├──────────► FINANZAS (fact_transacciones)
+           ├──────────► FINANZAS (fact_balance)
+           └──────────► FINANZAS (fact_estado_resultados)
+
+  ┌─────────────────┐
+  │  dim_producto   │
+  │                 │
+  │ 64 registros    │
+  │ Catálogo de     │
+  │ calzado         │
+  └────────┬────────┘
+           │
+           ├──────────► VENTAS (fact_ventas)
+           └──────────► INVENTARIO (fact_inventario)
+
+  ┌─────────────────┐
+  │  dim_usuario    │
+  │                 │
+  │ 54 registros    │
+  │ Usuarios del    │
+  │ sistema         │
+  └────────┬────────┘
+           │
+           ├──────────► VENTAS (fact_ventas)
+           ├──────────► INVENTARIO (fact_inventario)
+           └──────────► FINANZAS (fact_transacciones)
+```
+
+---
+
 ### 📐 Dimensiones (24 tablas)
 
 #### **Dimensiones desde Bases de Datos** (9 tablas)
