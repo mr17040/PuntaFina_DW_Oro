@@ -1,9 +1,3 @@
-envio_id,envio_externo_id,metodo_envio,transportista,costo_envio,tiempo_estimado_dias
-1,1,Envío Estándar,PuntaFina Logistics,5.99,5
-2,2,Envío Express,PuntaFina Logistics,12.99,2
-3,3,Envío Premium,PuntaFina Logistics,24.99,24
-4,4,Recogida en Tienda,PuntaFina Logistics,0.0,1
-5,5,Envío Gratis,PuntaFina Logistics,0.0,7
-6,6,Envío Internacional,PuntaFina Logistics,35.0,15
-7,7,Envío Nocturno,PuntaFina Logistics,45.0,12
-8,8,Courier Especializado,PuntaFina Logistics,18.5,1
+version https://git-lfs.github.com/spec/v1
+oid sha256:8ffc2a4340b98a68d11cd199b1c9b13a0649349945d9ec7751d61812278ad616
+size 476

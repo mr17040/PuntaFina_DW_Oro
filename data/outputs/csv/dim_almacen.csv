@@ -1,7 +1,3 @@
-almacen_id,id_almacen,nombre_almacen,tipo_almacen,ciudad,departamento,direccion,capacidad_m3,encargado,telefono,activo,fecha_apertura,tipo
-1,ALM_CENTRAL,Almacén Central,bodega,San Salvador,San Salvador,Zona Industrial Lote 45,500.0,María González,+503 2111-2222,True,2023-01-10,Almacén
-2,TIENDA_01,Tienda Metrocentro,tienda,San Salvador,San Salvador,Centro Comercial Metrocentro Local 234,80.0,Pedro Hernández,+503 2333-4444,True,2023-01-15,Almacén
-3,TIENDA_02,Tienda Multiplaza,tienda,San Salvador,San Salvador,Centro Comercial Multiplaza Local 156,75.0,Ana Martínez,+503 2555-6666,True,2023-02-01,Almacén
-4,TIENDA_03,Tienda Zona Rosa,tienda,San Salvador,San Salvador,Zona Rosa Blvd. del Hipódromo Local 45,60.0,Luis García,+503 2777-8888,True,2023-03-15,Almacén
-5,TIENDA_04,Tienda Santa Tecla,tienda,Santa Tecla,La Libertad,Centro Comercial Paseo Local 89,70.0,Carmen Flores,+503 2999-0000,True,2023-04-20,Almacén
-6,TIENDA_05,Tienda Santa Ana,tienda,Santa Ana,Santa Ana,Calle Libertad #456,65.0,Roberto Díaz,+503 2444-5555,True,2023-05-10,Almacén
+version https://git-lfs.github.com/spec/v1
+oid sha256:e7e6d7b155632956fadf27275a7700fa488d437a8cfdd08ab2f5e1e47046ba47
+size 1063

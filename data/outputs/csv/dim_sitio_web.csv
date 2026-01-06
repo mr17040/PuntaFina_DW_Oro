@@ -1,7 +1,3 @@
-sitio_web_id,sitio_externo_id,nombre,url,tipo,activo,created_at,updated_at
-1,1,PuntaFina Online,https://www.puntafina.com,ecommerce,True,2026-01-06 04:57:34.884113,2026-01-06 04:57:34.884755
-2,2,Tienda San Salvador Centro,Presencial - Centro Comercial,tienda_fisica,True,2026-01-06 04:57:34.884113,2026-01-06 04:57:34.884755
-3,3,Tienda Santa Ana,Presencial - Santa Ana,tienda_fisica,True,2026-01-06 04:57:34.884113,2026-01-06 04:57:34.884755
-4,4,Tienda San Miguel,Presencial - San Miguel,tienda_fisica,True,2026-01-06 04:57:34.884113,2026-01-06 04:57:34.884755
-5,5,Tienda Sonsonate,Presencial - Sonsonate,tienda_fisica,True,2026-01-06 04:57:34.884113,2026-01-06 04:57:34.884755
-6,6,Tienda La Libertad,Presencial - La Libertad,tienda_fisica,True,2026-01-06 04:57:34.884113,2026-01-06 04:57:34.884755
+version https://git-lfs.github.com/spec/v1
+oid sha256:bbfa84f150c34e8ecfc2e7e8cdac0ea0be3334d0dc58b7078aa9e03c13d675ce
+size 799

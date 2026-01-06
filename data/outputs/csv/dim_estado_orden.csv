@@ -1,17 +1,3 @@
-estado_orden_id,estado_orden_externo_id,codigo,nombre,descripcion
-1,EST001,open,Abierta,Orden creada pero no procesada
-2,EST002,pending_payment,Pago Pendiente,Esperando confirmación de pago
-3,EST003,payment_received,Pago Recibido,Pago confirmado y validado
-4,EST004,processing,En Procesamiento,Orden en preparación
-5,EST005,ready_to_ship,Lista para Envío,Empacada y lista
-6,EST006,shipped,Enviada,En tránsito al cliente
-7,EST007,in_transit,En Tránsito,En camino a destino
-8,EST008,out_for_delivery,En Reparto,En vehículo de entrega
-9,EST009,delivered,Entregada,Cliente recibió pedido
-10,EST010,completed,Completada,Transacción finalizada exitosamente
-11,EST011,canceled_by_customer,Cancelada por Cliente,Cliente canceló la orden
-12,EST012,canceled_by_store,Cancelada por Tienda,Tienda canceló por falta stock
-13,EST013,on_hold,En Espera,Orden pausada temporalmente
-14,EST014,failed,Fallida,Orden no pudo completarse
-15,EST015,returned,Devuelta,Cliente devolvió productos
-16,EST016,partially_shipped,Enviada Parcial,Solo algunos items enviados
+version https://git-lfs.github.com/spec/v1
+oid sha256:dd57132d904ac46a857d18818e195edfdc6b4141b4aafdb67cce9f6446804d42
+size 1054

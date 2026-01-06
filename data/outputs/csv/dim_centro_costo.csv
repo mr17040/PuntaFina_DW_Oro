@@ -1,10 +1,3 @@
-centro_costo_id,id_centro_costo,nombre_centro,tipo_centro,responsable,activo
-1,CC_TIENDA_01,Tienda Centro Comercial Metrocentro,ventas,Pedro Hernández,True
-2,CC_TIENDA_02,Tienda Centro Comercial Multiplaza,ventas,Ana Martínez,True
-3,CC_TIENDA_03,Tienda Zona Rosa,ventas,Luis García,True
-4,CC_TIENDA_04,Tienda Santa Tecla,ventas,Carmen Flores,True
-5,CC_TIENDA_05,Tienda Santa Ana,ventas,Roberto Díaz,True
-6,CC_ECOMMERCE,Tienda en Línea,ventas,Patricia Morales,True
-7,CC_ALMACEN,Almacén Central,operativo,María González,True
-8,CC_ADMIN,Administración General,administrativo,Jorge Rivas,True
-9,CC_MARKETING,Marketing y Publicidad,administrativo,Sofía Castillo,True
+version https://git-lfs.github.com/spec/v1
+oid sha256:e1da2fbe5c2500d48c7720b01540a7e444e4fea1473c8dcf6f64747140e6a871
+size 672
