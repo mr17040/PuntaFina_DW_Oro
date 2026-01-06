@@ -23,8 +23,8 @@ from core.batch_processor import BatchProcessor, BatchConfig, StreamingBatchProc
 from core.data_validator import DataValidator
 from extractors.database_extractor import DatabaseExtractor
 from extractors.csv_extractor import CSVExtractor
-from transformers.dimension_builder import DimensionBuilder
-from transformers.fact_builder import FactBuilder
+from transformers.complete_dimension_builder import CompleteDimensionBuilder
+from transformers.complete_fact_builder import CompleteFactBuilder
 from loaders.database_loader import DatabaseLoader
 from utils.logger import setup_logger
 from utils.metrics import MetricsCollector
@@ -80,8 +80,8 @@ class ETLOrchestrator:
         self.db_extractor = DatabaseExtractor(self.config)
         self.csv_extractor = CSVExtractor(self.config)
 
-        self.dimension_builder = DimensionBuilder(self.config)
-        self.fact_builder = FactBuilder(self.config)
+        self.dimension_builder = CompleteDimensionBuilder()
+        self.fact_builder = CompleteFactBuilder()
 
         self.db_loader = DatabaseLoader(self.config)
 
@@ -103,6 +103,10 @@ class ETLOrchestrator:
         start_time = datetime.now()
 
         try:
+            # -1. Desbloquear tablas forzadamente
+            self.logger.info("\n🔓 FASE -1: DESBLOQUEO FORZADO DE TABLAS")
+            self._force_unlock_tables()
+            
             # 1. Extracción
             self.logger.info("\n📥 FASE 1: EXTRACCIÓN")
             extraction_results = self._run_extraction()
@@ -146,6 +150,112 @@ class ETLOrchestrator:
         except Exception as e:
             self.logger.error(f"❌ Error en proceso ETL: {e}", exc_info=True)
             raise
+
+    def _force_unlock_tables(self):
+        """Desbloquear forzadamente todas las tablas eliminando conexiones idle y locks"""
+        import psycopg2
+        
+        try:
+            conn = psycopg2.connect(
+                host=os.getenv("DW_DB_HOST"),
+                port=int(os.getenv("DW_DB_PORT")),
+                dbname=os.getenv("DW_DB_NAME"),
+                user=os.getenv("DW_DB_USER"),
+                password=os.getenv("DW_DB_PASS"),
+                connect_timeout=30
+            )
+            cursor = conn.cursor()
+            
+            # 1. Terminar todas las conexiones idle in transaction
+            self.logger.info("   💥 Terminando conexiones idle...")
+            cursor.execute("""
+                SELECT pg_terminate_backend(pid), pid, usename, state, query_start
+                FROM pg_stat_activity 
+                WHERE datname = current_database() 
+                AND pid <> pg_backend_pid()
+                AND state IN ('idle in transaction', 'idle in transaction (aborted)')
+            """)
+            terminated = cursor.fetchall()
+            if terminated:
+                self.logger.info(f"   ✓ Terminadas {len(terminated)} conexiones idle")
+            
+            # 2. Cancelar queries largas (más de 5 minutos)
+            self.logger.info("   ⏱️  Cancelando queries largas...")
+            cursor.execute("""
+                SELECT pg_cancel_backend(pid), pid, usename, 
+                       EXTRACT(EPOCH FROM (NOW() - query_start)) as duration
+                FROM pg_stat_activity 
+                WHERE datname = current_database() 
+                AND pid <> pg_backend_pid()
+                AND state = 'active'
+                AND query_start < NOW() - INTERVAL '5 minutes'
+                AND query NOT LIKE '%pg_stat_activity%'
+            """)
+            cancelled = cursor.fetchall()
+            if cancelled:
+                self.logger.info(f"   ✓ Canceladas {len(cancelled)} queries largas")
+            
+            # 3. Liberar locks de tablas
+            self.logger.info("   🔒 Liberando locks de tablas...")
+            cursor.execute("""
+                SELECT pg_terminate_backend(a.pid)
+                FROM pg_locks l
+                JOIN pg_stat_activity a ON l.pid = a.pid
+                WHERE l.locktype = 'relation'
+                AND a.datname = current_database()
+                AND a.pid <> pg_backend_pid()
+                AND a.state <> 'active'
+            """)
+            unlocked = cursor.fetchall()
+            if unlocked:
+                self.logger.info(f"   ✓ Liberados {len(unlocked)} locks")
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            self.logger.info("   ✅ Desbloqueo forzado completado")
+            
+        except Exception as e:
+            self.logger.warning(f"   ⚠️  Error en desbloqueo: {e}")
+
+    def _cleanup_obsolete_tables(self):
+        """Limpiar tablas obsoletas del modelo"""
+        import psycopg2
+        
+        obsolete_tables = [
+            'dim_sitio_web', 'dim_canal', 'dim_direccion', 'dim_envio',
+            'dim_pago', 'dim_promocion', 'dim_line_item', 'dim_estado_orden',
+            'dim_estado_pago', 'dim_categoria_producto'
+        ]
+        
+        try:
+            conn = psycopg2.connect(
+                host=os.getenv("DW_DB_HOST"),
+                port=int(os.getenv("DW_DB_PORT")),
+                dbname=os.getenv("DW_DB_NAME"),
+                user=os.getenv("DW_DB_USER"),
+                password=os.getenv("DW_DB_PASS"),
+                connect_timeout=120,
+                options="-c statement_timeout=1800000"
+            )
+            cursor = conn.cursor()
+            
+            for table in obsolete_tables:
+                try:
+                    cursor.execute(f"DROP TABLE IF EXISTS {table} CASCADE")
+                    self.logger.info(f"   ✓ Eliminada tabla obsoleta: {table}")
+                except Exception as e:
+                    self.logger.warning(f"   ⚠️  No se pudo eliminar {table}: {e}")
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            self.logger.info("   ✅ Limpieza de estructura completada")
+            
+        except Exception as e:
+            self.logger.error(f"   ❌ Error en limpieza: {e}")
 
     def _run_extraction(self) -> Dict[str, Any]:
         """Fase de extracción de datos"""
@@ -215,6 +325,11 @@ class ETLOrchestrator:
                     dim_df, self.dimension_builder.get_schema(dim_name), dim_name
                 )
 
+                # Asignar surrogate key si no existe
+                if f'{dim_name.replace("dim_", "")}_id' not in dim_df.columns:
+                    sk_column = f'{dim_name.replace("dim_", "")}_id'
+                    dim_df.insert(0, sk_column, range(1, len(dim_df) + 1))
+
                 # Guardar
                 self._save_dimension(dim_name, dim_df)
 
@@ -252,6 +367,11 @@ class ETLOrchestrator:
                             dim_name,
                         )
                     )
+
+                    # Asignar surrogate key si no existe
+                    if f'{dim_name.replace("dim_", "")}_id' not in dim_df.columns:
+                        sk_column = f'{dim_name.replace("dim_", "")}_id'
+                        dim_df.insert(0, sk_column, range(1, len(dim_df) + 1))
 
                     self._save_dimension(dim_name, dim_df)
 
@@ -324,6 +444,10 @@ class ETLOrchestrator:
         """Fase de carga a base de datos"""
         results = {"tables_loaded": [], "total_records": 0, "errors": []}
 
+        # PASO 0: Limpiar PRIMERO las fact tables para evitar violaciones de FK
+        self.logger.info("   🧹 Limpiando fact tables...")
+        self._clean_fact_tables()
+        
         self.logger.info("   🚛 Cargando dimensiones...")
 
         # Cargar dimensiones
@@ -383,6 +507,46 @@ class ETLOrchestrator:
         )
 
         return results
+
+    def _clean_fact_tables(self):
+        """Limpiar todas las fact tables primero para evitar violaciones de FK"""
+        import psycopg2
+        
+        fact_tables = [
+            'fact_ventas',
+            'fact_inventario', 
+            'fact_transacciones',
+            'fact_balance',
+            'fact_estado_resultados'
+        ]
+        
+        try:
+            conn = psycopg2.connect(
+                host=os.getenv("DW_DB_HOST"),
+                port=int(os.getenv("DW_DB_PORT")),
+                dbname=os.getenv("DW_DB_NAME"),
+                user=os.getenv("DW_DB_USER"),
+                password=os.getenv("DW_DB_PASS"),
+                connect_timeout=30
+            )
+            cursor = conn.cursor()
+            
+            for table in fact_tables:
+                try:
+                    cursor.execute(f"SET statement_timeout = '30s'")
+                    cursor.execute(f"DELETE FROM {table}")
+                    conn.commit()
+                    self.logger.info(f"      ✓ Limpiada: {table}")
+                except Exception as e:
+                    # Si la tabla no existe, no es un error crítico
+                    if "does not exist" not in str(e):
+                        self.logger.warning(f"      ⚠️  {table}: {e}")
+            
+            cursor.close()
+            conn.close()
+            
+        except Exception as e:
+            self.logger.warning(f"   ⚠️  Error limpiando fact tables: {e}")
 
     def _run_final_validation(self) -> Dict[str, Any]:
         """Validación final del proceso"""

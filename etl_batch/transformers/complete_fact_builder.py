@@ -8,6 +8,7 @@ import pandas as pd
 import psycopg2
 import os
 from datetime import datetime
+from typing import Dict, Any
 import logging
 from pathlib import Path
 
@@ -22,7 +23,26 @@ class CompleteFactBuilder:
     def __init__(self):
         self.oro_conn = self._get_oro_connection()
         self.dw_conn = self._get_dw_connection()
-        
+    
+    def build(self, fact_name: str, fact_config: Dict[str, Any] = None) -> pd.DataFrame:
+        """
+        Método genérico para construir cualquier fact table
+        Delegación a métodos específicos
+        """
+        method_name = f"build_{fact_name}"
+        if hasattr(self, method_name):
+            method = getattr(self, method_name)
+            return method()
+        else:
+            logger.warning(f"Fact table {fact_name} no implementada en CompleteFactBuilder")
+            return pd.DataFrame()    
+    def get_schema(self, fact_name: str) -> Dict[str, str]:
+        """
+        Retorna el esquema de la fact table para el loader
+        Este método es requerido por el orchestrator pero no lo usamos
+        porque fact_ventas se carga via dblink directamente
+        """
+        return {}        
     def _get_oro_connection(self):
         """Conexión a OroCommerce"""
         return psycopg2.connect(
@@ -40,7 +60,9 @@ class CompleteFactBuilder:
             port=int(os.getenv('DW_DB_PORT')),
             dbname=os.getenv('DW_DB_NAME'),
             user=os.getenv('DW_DB_USER'),
-            password=os.getenv('DW_DB_PASS')
+            password=os.getenv('DW_DB_PASS'),
+            connect_timeout=120,
+            options='-c statement_timeout=1800000'
         )
     
     def _resolve_surrogate_keys(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -139,83 +161,146 @@ class CompleteFactBuilder:
         
         return df
     def build_fact_ventas(self) -> pd.DataFrame:
-        """Construir fact_ventas desde oro_order + oro_order_line_item"""
+        """
+        Construir fact_ventas desde oro_order + oro_order_line_item
+        CORREGIDO: Retorna DataFrame en lugar de insertar directamente
+        """
         logger.info("💰 Construyendo fact_ventas...")
         
+        # Extraer datos de OroCommerce
         query = """
         SELECT 
-            o.id as orden_id,
-            o.customer_id as cliente_externo_id,
-            o.website_id as sitio_web_id,
-            o.customer_user_id as usuario_id,
-            o.created_at::date as fecha_orden,
-            oli.id as line_item_id,
-            oli.product_id,
-            oli.quantity as cantidad,
-            oli.value as precio_unitario,
-            (oli.quantity * oli.value) as subtotal,
-            COALESCE(o.subtotal_value, oli.quantity * oli.value) as total_orden,
-            o.currency,
-            o.created_at,
-            COALESCE(o.internal_status_id, 'pending') as estado_orden_interno,
-            COALESCE(o.shipping_address_id, o.billing_address_id, 0) as direccion_id
+            o.created_at::date as fecha,
+            o.id as orden_id_externo,
+            COALESCE(o.customer_user_id, 1) as cliente_id_externo,
+            COALESCE(o.user_owner_id, 1) as usuario_id_externo,
+            oli.product_id as producto_id_externo,
+            oli.id as line_item_id_externo,
+            CAST(oli.quantity AS NUMERIC(10,2)) as cantidad,
+            CAST(oli.value AS NUMERIC(10,2)) as precio_unitario,
+            CAST(oli.quantity * oli.value AS NUMERIC(10,2)) as subtotal,
+            CAST(0.0 AS NUMERIC(10,2)) as descuento,
+            CAST((oli.quantity * oli.value) * 0.13 AS NUMERIC(10,2)) as impuesto,
+            CAST(0.0 AS NUMERIC(10,2)) as envio,
+            CAST((oli.quantity * oli.value) * 1.13 AS NUMERIC(10,2)) as total,
+            CAST(oli.value * 0.6 AS NUMERIC(10,2)) as costo_unitario,
+            CAST(oli.quantity * oli.value * 0.6 AS NUMERIC(10,2)) as costo_total,
+            CAST((oli.quantity * oli.value) * 0.4 AS NUMERIC(10,2)) as margen
         FROM oro_order o
-        INNER JOIN oro_order_line_item oli ON o.id = oli.order_id
-        WHERE o.created_at >= '2023-01-01'
+        JOIN oro_order_line_item oli ON o.id = oli.order_id
+        WHERE o.created_at IS NOT NULL 
+          AND oli.product_id IS NOT NULL
           AND oli.quantity > 0
-          AND oli.value > 0
-        ORDER BY o.created_at DESC
         """
         
+        logger.info("   📥 Extrayendo datos desde OroCommerce...")
         df = pd.read_sql_query(query, self.oro_conn)
+        logger.info(f"   ✓ Extraídos {len(df):,} registros")
         
-        # Hacer lookup de SKs desde el DW
-        logger.info("🔍 Resolviendo Surrogate Keys desde DW...")
-        df = self._resolve_surrogate_keys(df)
+        if df.empty:
+            logger.warning("   ⚠️  No hay datos en oro_order/oro_order_line_item")
+            return pd.DataFrame()
         
-        # Convertir fecha a ID
-        df['fecha_id'] = pd.to_datetime(df['fecha_orden']).dt.strftime('%Y%m%d').astype(int)
+        # Cargar dimensiones en memoria desde archivos parquet
+        parquet_dir = ROOT / 'data' / 'outputs' / 'parquet'
         
-        # Mapear estados de orden
-        estado_orden_map = {
-            'open': 'pending',
-            'pending': 'pending',
-            'processing': 'processing',
-            'shipped': 'shipped',
-            'delivered': 'delivered',
-            'cancelled': 'cancelled',
-            'closed': 'completed',
-            'completed': 'completed',
-        }
-        df['id_estado_orden'] = df['estado_orden_interno'].map(lambda x: estado_orden_map.get(x, 'pending'))
+        dim_fecha = pd.read_parquet(parquet_dir / 'dim_fecha.parquet')
+        dim_cliente = pd.read_parquet(parquet_dir / 'dim_cliente.parquet')
+        dim_producto = pd.read_parquet(parquet_dir / 'dim_producto.parquet')
+        dim_orden = pd.read_parquet(parquet_dir / 'dim_orden.parquet')
+        dim_usuario = pd.read_parquet(parquet_dir / 'dim_usuario.parquet')
+        dim_impuestos = pd.read_parquet(parquet_dir / 'dim_impuestos.parquet')
+        dim_line_item = pd.read_parquet(parquet_dir / 'dim_line_item.parquet')
         
-        # IDs por defecto para otras dimensiones
-        df['canal_id'] = 1
-        df['estado_pago_id'] = 1
-        df['metodo_pago_id'] = 1
-        df['metodo_envio_id'] = 1
-        df['impuesto_id'] = 1
-        df['promocion_id'] = None
+        logger.info("   🔗 Resolviendo surrogate keys...")
         
-        # Cálculos financieros
-        df['costo_unitario'] = df['precio_unitario'] * 0.6
-        df['costo_total'] = df['costo_unitario'] * df['cantidad']
-        df['descuento'] = 0.0
-        df['impuesto'] = df['subtotal'] * 0.13
-        df['total'] = df['subtotal'] + df['impuesto']
-        df['margen_bruto'] = df['subtotal'] - df['costo_total']
-        df['margen_porcentaje'] = (df['margen_bruto'] / df['subtotal'] * 100).round(2)
+        # Convertir fechas a mismo tipo para merge
+        df['fecha'] = pd.to_datetime(df['fecha'])
+        dim_fecha['fecha'] = pd.to_datetime(dim_fecha['fecha'])
         
-        # Comisiones
-        df['comision'] = df['subtotal'] * 0.05
+        # Resolver fecha_id
+        df = df.merge(dim_fecha[['fecha_id', 'fecha']], left_on='fecha', right_on='fecha', how='left')
+        df['fecha_id'] = df['fecha_id'].fillna(1).astype(int)
         
-        # Métricas adicionales
-        df['peso_total'] = df['cantidad'] * 0.5
-        df['volumen_total'] = df['cantidad'] * 0.01
+        # Resolver cliente_id
+        df = df.merge(
+            dim_cliente[['cliente_id', 'cliente_externo_id']],
+            left_on='cliente_id_externo',
+            right_on='cliente_externo_id',
+            how='left',
+            suffixes=('', '_dim')
+        )
+        df['cliente_id'] = df['cliente_id'].fillna(1).astype(int)
+        df = df.drop(columns=['cliente_externo_id'], errors='ignore')
         
-        logger.info(f"✓ fact_ventas: {len(df):,} registros desde oro_order")
-        logger.info(f"   Estados de orden: {df['id_estado_orden'].value_counts().to_dict()}")
-        return df
+        # Resolver producto_id
+        df = df.merge(
+            dim_producto[['producto_id', 'producto_externo_id']],
+            left_on='producto_id_externo',
+            right_on='producto_externo_id',
+            how='left',
+            suffixes=('', '_dim')
+        )
+        df['producto_id'] = df['producto_id'].fillna(1).astype(int)
+        df = df.drop(columns=['producto_externo_id'], errors='ignore')
+        
+        # Resolver orden_id
+        df = df.merge(
+            dim_orden[['orden_id', 'orden_externo_id']],
+            left_on='orden_id_externo',
+            right_on='orden_externo_id',
+            how='left',
+            suffixes=('', '_dim')
+        )
+        df['orden_id'] = df['orden_id'].fillna(1).astype(int)
+        df = df.drop(columns=['orden_externo_id'], errors='ignore')
+        
+        # Resolver usuario_id
+        df = df.merge(
+            dim_usuario[['usuario_id', 'usuario_externo_id']],
+            left_on='usuario_id_externo',
+            right_on='usuario_externo_id',
+            how='left',
+            suffixes=('', '_dim')
+        )
+        df['usuario_id'] = df['usuario_id'].fillna(1).astype(int)
+        df = df.drop(columns=['usuario_externo_id'], errors='ignore')
+        
+        # almacen_id por defecto (no está en oro_order)
+        df['almacen_id'] = 1
+        
+        # Resolver line_item_id
+        df = df.merge(
+            dim_line_item[['line_item_id', 'line_item_externo_id']],
+            left_on='line_item_id_externo',
+            right_on='line_item_externo_id',
+            how='left',
+            suffixes=('', '_dim')
+        )
+        df['line_item_id'] = df['line_item_id'].fillna(1).astype(int)
+        df = df.drop(columns=['line_item_externo_id'], errors='ignore')
+        
+        # Asignar impuesto_id (1=IVA 13%, 5=Sin Impuesto)
+        df['impuesto_id'] = df['impuesto'].apply(lambda x: 1 if x > 0 else 5)
+        
+        # Seleccionar columnas finales
+        fact_cols = [
+            'fecha_id', 'cliente_id', 'producto_id', 'orden_id', 'usuario_id', 
+            'almacen_id', 'impuesto_id', 'cantidad', 'precio_unitario', 'subtotal',
+            'descuento', 'impuesto', 'envio', 'total', 'costo_unitario', 
+            'costo_total', 'margen'
+        ]
+        
+        df_final = df[fact_cols].copy()
+        df_final['created_at'] = datetime.now()
+        
+        # Agregar surrogate key (PK)
+        df_final.insert(0, 'venta_id', range(1, len(df_final) + 1))
+        
+        logger.info(f"   ✅ fact_ventas: {len(df_final):,} registros construidos")
+        logger.info(f"   📊 IDs únicos: clientes={df_final['cliente_id'].nunique()}, productos={df_final['producto_id'].nunique()}, ordenes={df_final['orden_id'].nunique()}")
+        
+        return df_final
     
     def build_fact_inventario(self) -> pd.DataFrame:
         """Construir fact_inventario desde CSV movimientos_inventario"""
@@ -237,11 +322,24 @@ class CompleteFactBuilder:
         # Resolver SKs de dimensiones
         logger.info("🔍 Resolviendo SKs para fact_inventario...")
         
+        # Cargar dimensiones desde parquet
+        parquet_dir = ROOT / 'data' / 'outputs' / 'parquet'
+        dim_producto = pd.read_parquet(parquet_dir / 'dim_producto.parquet')
+        dim_almacen = pd.read_parquet(parquet_dir / 'dim_almacen.parquet')
+        dim_proveedor = pd.read_parquet(parquet_dir / 'dim_proveedor.parquet')
+        dim_tipo_mov = pd.read_parquet(parquet_dir / 'dim_tipo_movimiento.parquet')
+        
         # Lookup dim_producto usando product_id del CSV
-        query_producto = "SELECT producto_id, producto_externo_id FROM dim_producto"
-        dim_producto = pd.read_sql_query(query_producto, self.dw_conn)
         df['product_id'] = df['product_id'].astype(int)
         dim_producto['producto_externo_id'] = dim_producto['producto_externo_id'].astype(int)
+        
+        # Filtrar solo productos que existen en dim_producto
+        productos_validos = dim_producto['producto_externo_id'].unique()
+        df_original_count = len(df)
+        df = df[df['product_id'].isin(productos_validos)]
+        if df_original_count > len(df):
+            logger.warning(f"   ⚠️  Filtrados {df_original_count - len(df)} registros con productos inexistentes")
+        
         df = df.merge(
             dim_producto[['producto_id', 'producto_externo_id']], 
             left_on='product_id',
@@ -251,52 +349,55 @@ class CompleteFactBuilder:
         df['producto_id'] = df['producto_id'].fillna(1).astype(int)
         df = df.drop(columns=['producto_externo_id', 'product_id'], errors='ignore')
         
-        # Lookup dim_almacen - usar código directamente (ALM001)
-        query_almacen = "SELECT almacen_id, codigo FROM dim_almacen"
-        dim_almacen = pd.read_sql_query(query_almacen, self.dw_conn)
+        # Lookup dim_almacen - usar id_almacen directamente (ALM_CENTRAL, TIENDA_01...)
         df = df.merge(
-            dim_almacen,
+            dim_almacen[['almacen_id', 'id_almacen']],
             left_on='almacen_id',
-            right_on='codigo',
+            right_on='id_almacen',
             how='left',
             suffixes=('_orig', '_sk')
         )
         df['almacen_id'] = df['almacen_id_sk'].fillna(1).astype(int)
-        df = df.drop(columns=['codigo', 'almacen_id_orig', 'almacen_id_sk'], errors='ignore')
+        df = df.drop(columns=['id_almacen', 'almacen_id_orig', 'almacen_id_sk'], errors='ignore')
         
-        # Lookup dim_proveedor - usar código directamente (PROV001)
-        query_proveedor = "SELECT proveedor_id, codigo FROM dim_proveedor"
-        dim_proveedor = pd.read_sql_query(query_proveedor, self.dw_conn)
-        df = df.merge(
-            dim_proveedor,
-            left_on='proveedor_id',
-            right_on='codigo',
-            how='left',
-            suffixes=('_orig', '_sk')
-        )
-        df['proveedor_id'] = df['proveedor_id_sk'].fillna(1).astype(int)
-        df = df.drop(columns=['codigo', 'proveedor_id_orig', 'proveedor_id_sk'], errors='ignore')
+        # Lookup dim_proveedor - usar id_proveedor
+        if 'id_proveedor' in dim_proveedor.columns:
+            df = df.merge(
+                dim_proveedor[['proveedor_id', 'id_proveedor']],
+                left_on='proveedor_id',
+                right_on='id_proveedor',
+                how='left',
+                suffixes=('_orig', '_sk')
+            )
+            df['proveedor_id'] = df['proveedor_id_sk'].fillna(1).astype(int)
+            df = df.drop(columns=['id_proveedor', 'proveedor_id_orig', 'proveedor_id_sk'], errors='ignore')
+        else:
+            df['proveedor_id'] = 1
         
-        # Lookup dim_tipo_movimiento - usar código directamente
-        query_tipo_mov = "SELECT tipo_movimiento_id, codigo FROM dim_tipo_movimiento"
-        dim_tipo_mov = pd.read_sql_query(query_tipo_mov, self.dw_conn)
-        df = df.merge(
-            dim_tipo_mov,
-            left_on='tipo_movimiento_id',
-            right_on='codigo',
-            how='left',
-            suffixes=('_orig', '_sk')
-        )
-        df['tipo_movimiento_id'] = df['tipo_movimiento_id_sk'].fillna(1).astype(int)
-        df = df.drop(columns=['codigo', 'tipo_movimiento_id_orig', 'tipo_movimiento_id_sk'], errors='ignore')
+        # Lookup dim_tipo_movimiento - usar codigo_movimiento o id
+        if 'codigo_movimiento' in dim_tipo_mov.columns:
+            df = df.merge(
+                dim_tipo_mov[['tipo_movimiento_id', 'codigo_movimiento']],
+                left_on='tipo_movimiento_id',
+                right_on='codigo_movimiento',
+                how='left',
+                suffixes=('_orig', '_sk')
+            )
+            df['tipo_movimiento_id'] = df['tipo_movimiento_id_sk'].fillna(1).astype(int)
+            df = df.drop(columns=['codigo_movimiento', 'tipo_movimiento_id_orig', 'tipo_movimiento_id_sk'], errors='ignore')
+        else:
+            df['tipo_movimiento_id'] = 1
         
         # Usuario por defecto
         df['usuario_id'] = 1
         
+        # Agregar surrogate key (PK)
+        df.insert(0, 'movimiento_id', range(1, len(df) + 1))
+        
         logger.info(f"✓ fact_inventario: {len(df):,} registros desde CSV")
         logger.info(f"   Productos únicos: {df['producto_id'].nunique()}, Almacenes: {df['almacen_id'].nunique()}")
         
-        return df[['fecha_id', 'producto_id', 'almacen_id', 'tipo_movimiento_id', 'proveedor_id', 
+        return df[['movimiento_id', 'fecha_id', 'producto_id', 'almacen_id', 'tipo_movimiento_id', 'proveedor_id', 
                    'usuario_id', 'cantidad', 'costo_unitario', 'costo_total', 
                    'stock_anterior', 'stock_resultante', 'documento', 'observaciones']]
     
@@ -314,35 +415,44 @@ class CompleteFactBuilder:
         # Resolver SKs de dimensiones
         logger.info("🔍 Resolviendo SKs para fact_transacciones...")
         
+        # Cargar dimensiones desde parquet
+        parquet_dir = ROOT / 'data' / 'outputs' / 'parquet'
+        dim_cuenta = pd.read_parquet(parquet_dir / 'dim_cuenta_contable.parquet')
+        dim_centro = pd.read_parquet(parquet_dir / 'dim_centro_costo.parquet')
+        
+        # Filtrar solo cuentas que existen en dim_cuenta_contable
+        dim_cuenta['codigo'] = dim_cuenta['codigo'].astype(int)
+        df['cuenta_id'] = df['cuenta_id'].astype(int)
+        cuentas_validas = dim_cuenta['codigo'].unique()
+        df_original_count = len(df)
+        df = df[df['cuenta_id'].isin(cuentas_validas)]
+        if df_original_count > len(df):
+            logger.warning(f"   ⚠️  Filtrados {df_original_count - len(df)} registros con cuentas inexistentes")
+        
         # Lookup dim_cuenta_contable - el CSV usa códigos directos (1102, 1103, 4101, etc.)
-        # Mapear código del CSV → SK de la dimensión
-        query_cuenta = "SELECT cuenta_id, codigo FROM dim_cuenta_contable"
-        dim_cuenta = pd.read_sql_query(query_cuenta, self.dw_conn)
-        dim_cuenta['codigo'] = dim_cuenta['codigo'].astype(str)
-        df['cuenta_codigo_csv'] = df['cuenta_id'].astype(str)
-        
+        # Mapear código del CSV → SK de la dimensión (cuenta_contable_id)
         df = df.merge(
-            dim_cuenta,
-            left_on='cuenta_codigo_csv',
+            dim_cuenta[['cuenta_contable_id', 'codigo']],
+            left_on='cuenta_id',
             right_on='codigo',
-            how='left',
-            suffixes=('_csv', '_dim')
+            how='left'
         )
-        df['cuenta_id'] = df['cuenta_id_dim'].fillna(1).astype(int)
-        df = df.drop(columns=['codigo', 'cuenta_codigo_csv', 'cuenta_id_csv', 'cuenta_id_dim'], errors='ignore')
+        df['cuenta_id'] = df['cuenta_contable_id'].fillna(1).astype(int)
+        df = df.drop(columns=['codigo', 'cuenta_contable_id'], errors='ignore')
         
-        # Lookup dim_centro_costo - usar código directamente (CC001)
-        query_centro = "SELECT centro_costo_id, codigo FROM dim_centro_costo"
-        dim_centro = pd.read_sql_query(query_centro, self.dw_conn)
-        df = df.merge(
-            dim_centro,
-            left_on='centro_costo_id',
-            right_on='codigo',
-            how='left',
-            suffixes=('_orig', '_sk')
-        )
-        df['centro_costo_id'] = df['centro_costo_id_sk'].fillna(1).astype(int)
-        df = df.drop(columns=['codigo', 'centro_costo_id_orig', 'centro_costo_id_sk'], errors='ignore')
+        # Lookup dim_centro_costo - usar id_centro_costo o codigo
+        if 'id_centro_costo' in dim_centro.columns:
+            df = df.merge(
+                dim_centro[['centro_costo_id', 'id_centro_costo']],
+                left_on='centro_costo_id',
+                right_on='id_centro_costo',
+                how='left',
+                suffixes=('_orig', '_sk')
+            )
+            df['centro_costo_id'] = df['centro_costo_id_sk'].fillna(1).astype(int)
+            df = df.drop(columns=['id_centro_costo', 'centro_costo_id_orig', 'centro_costo_id_sk'], errors='ignore')
+        else:
+            df['centro_costo_id'] = 1
         
         # Lookup dim_tipo_transaccion - el CSV tiene ID numérico directo
         df['tipo_transaccion_id'] = df['tipo_transaccion_id'].fillna(1).astype(int)
@@ -360,19 +470,70 @@ class CompleteFactBuilder:
         # Columna movimiento_inventario_id por defecto
         df['movimiento_inventario_id'] = None
         
+        # Agregar surrogate key (PK)
+        df.insert(0, 'transaccion_id', range(1, len(df) + 1))
+        
         logger.info(f"✓ fact_transacciones: {len(df):,} registros desde CSV")
         logger.info(f"   Tipo movimiento: {df['tipo_movimiento'].value_counts().to_dict()}")
         logger.info(f"   Períodos: {df['periodo_id'].min()} a {df['periodo_id'].max()}")
         logger.info(f"   Cuentas únicas: {df['cuenta_id'].nunique()}")
         
-        return df[['fecha_id', 'periodo_id', 'cuenta_id', 'centro_costo_id', 'tipo_transaccion_id', 'usuario_id',
+        return df[['transaccion_id', 'fecha_id', 'periodo_id', 'cuenta_id', 'centro_costo_id', 'tipo_transaccion_id', 'usuario_id',
                    'numero_asiento', 'tipo_movimiento', 'monto', 'documento_referencia', 
                    'descripcion', 'orden_id', 'movimiento_inventario_id']]
     
     def build_fact_balance(self) -> pd.DataFrame:
-        """Construir fact_balance agregado desde fact_transacciones"""
-        logger.info("📊 Construyendo fact_balance desde fact_transacciones...")
+        """Construir fact_balance desde CSV o fact_transacciones"""
+        logger.info("📊 Construyendo fact_balance...")
         
+        # Primero intentar cargar desde CSV
+        csv_path = ROOT / 'data' / 'inputs' / 'fact_balance.csv'
+        if csv_path.exists():
+            logger.info(f"   📂 Cargando desde CSV: {csv_path}")
+            try:
+                df = pd.read_csv(csv_path)
+                
+                # Eliminar fecha_id del CSV si existe (lo recalcularemos)
+                if 'fecha_id' in df.columns:
+                    df = df.drop(columns=['fecha_id'])
+                
+                # Los cuenta_id del CSV ya son surrogate keys (1,2,3...)
+                # Solo necesitamos validar que existan en dim_cuenta_contable
+                parquet_dir = ROOT / 'data' / 'outputs' / 'parquet'
+                dim_cuenta = pd.read_parquet(parquet_dir / 'dim_cuenta_contable.parquet')
+                cuentas_validas = dim_cuenta['cuenta_contable_id'].unique()
+                
+                # Filtrar solo cuentas que existen
+                df_original_count = len(df)
+                df = df[df['cuenta_id'].isin(cuentas_validas)]
+                if df_original_count > len(df):
+                    logger.warning(f"   ⚠️  Filtrados {df_original_count - len(df)} registros con cuentas inexistentes")
+                
+                # Convertir tipos
+                for col in ['periodo_id', 'cuenta_id']:
+                    df[col] = df[col].astype(int)
+                for col in ['saldo_inicial', 'debitos', 'creditos', 'saldo_final']:
+                    df[col] = df[col].astype(float).round(2)
+                
+                # Si periodo_id es secuencial (1,2,3...) convertir a formato YYYYMM
+                if df['periodo_id'].min() < 1000:
+                    logger.info(f"   🔄 Convirtiendo periodo_id secuencial a formato YYYYMM...")
+                    df['periodo_id'] = 202400 + df['periodo_id']
+                
+                # Generar fecha_id desde periodo_id (YYYYMM → YYYYMM01)
+                df['fecha_id'] = (df['periodo_id'] * 100 + 1).astype(int)
+                
+                # Agregar surrogate key (PK)
+                df.insert(0, 'balance_id', range(1, len(df) + 1))
+                    
+                logger.info(f"   ✓ fact_balance: {len(df):,} registros desde CSV")
+                logger.info(f"   Períodos: {sorted(df['periodo_id'].unique())}")
+                return df
+            except Exception as e:
+                logger.warning(f"   ⚠️  Error leyendo CSV: {e}")
+        
+        # Si no hay CSV, intentar construir desde fact_transacciones
+        logger.info("   📊 Construyendo desde fact_transacciones...")
         query = """
         SELECT 
             periodo_id,
@@ -412,6 +573,12 @@ class CompleteFactBuilder:
             for col in ['debitos', 'creditos', 'saldo_inicial', 'saldo_final']:
                 df[col] = df[col].astype(float).round(2)
             
+            # Generar fecha_id desde periodo_id (YYYYMM → YYYYMM01)
+            df['fecha_id'] = (df['periodo_id'] * 100 + 1).astype(int)
+            
+            # Agregar surrogate key (PK)
+            df.insert(0, 'balance_id', range(1, len(df) + 1))
+            
             logger.info(f"✓ fact_balance: {len(df):,} registros agregados")
             logger.info(f"   Períodos: {df['periodo_id'].nunique()}, Cuentas: {df['cuenta_id'].nunique()}")
             
@@ -427,9 +594,58 @@ class CompleteFactBuilder:
         return df
     
     def build_fact_estado_resultados(self) -> pd.DataFrame:
-        """Construir fact_estado_resultados agregado desde fact_transacciones"""
-        logger.info("📈 Construyendo fact_estado_resultados desde fact_transacciones...")
+        """Construir fact_estado_resultados desde CSV o fact_transacciones"""
+        logger.info("📈 Construyendo fact_estado_resultados...")
         
+        # Primero intentar cargar desde CSV
+        csv_path = ROOT / 'data' / 'inputs' / 'fact_estado_resultados.csv'
+        if csv_path.exists():
+            logger.info(f"   📂 Cargando desde CSV: {csv_path}")
+            try:
+                df = pd.read_csv(csv_path)
+                
+                # Eliminar fecha_id del CSV si existe (lo recalcularemos)
+                if 'fecha_id' in df.columns:
+                    df = df.drop(columns=['fecha_id'])
+                
+                # Los cuenta_id del CSV ya son surrogate keys (7,8,9,10,11...)
+                # Solo necesitamos validar que existan en dim_cuenta_contable
+                parquet_dir = ROOT / 'data' / 'outputs' / 'parquet'
+                dim_cuenta = pd.read_parquet(parquet_dir / 'dim_cuenta_contable.parquet')
+                cuentas_validas = dim_cuenta['cuenta_contable_id'].unique()
+                
+                # Filtrar solo cuentas que existen
+                df_original_count = len(df)
+                df = df[df['cuenta_id'].isin(cuentas_validas)]
+                if df_original_count > len(df):
+                    logger.warning(f"   ⚠️  Filtrados {df_original_count - len(df)} registros con cuentas inexistentes")
+                
+                # Convertir tipos
+                for col in ['periodo_id', 'cuenta_id', 'centro_costo_id']:
+                    df[col] = df[col].astype(int)
+                for col in ['ingresos', 'costos', 'gastos', 'utilidad_bruta', 'utilidad_neta']:
+                    df[col] = df[col].astype(float).round(2)
+                
+                # Si periodo_id es secuencial (1,2,3...) convertir a formato YYYYMM
+                if df['periodo_id'].min() < 1000:
+                    logger.info(f"   🔄 Convirtiendo periodo_id secuencial a formato YYYYMM...")
+                    # Asumir que 1=Ene 2024 (202401), 2=Feb 2024 (202402), etc.
+                    df['periodo_id'] = 202400 + df['periodo_id']
+                
+                # Generar fecha_id desde periodo_id (YYYYMM → YYYYMM01)
+                df['fecha_id'] = (df['periodo_id'] * 100 + 1).astype(int)
+                
+                # Agregar surrogate key (PK)
+                df.insert(0, 'estado_resultados_id', range(1, len(df) + 1))
+                    
+                logger.info(f"   ✓ fact_estado_resultados: {len(df):,} registros desde CSV")
+                logger.info(f"   Períodos: {sorted(df['periodo_id'].unique())}")
+                return df
+            except Exception as e:
+                logger.warning(f"   ⚠️  Error leyendo CSV: {e}")
+        
+        # Si no hay CSV, intentar construir desde fact_transacciones
+        logger.info("   📈 Construyendo desde fact_transacciones...")
         query = """
         SELECT 
             ft.periodo_id,
@@ -502,6 +718,12 @@ class CompleteFactBuilder:
                 result[col] = result[col].astype(int)
             for col in ['ingresos', 'costos', 'gastos', 'utilidad_bruta', 'utilidad_neta']:
                 result[col] = result[col].astype(float).round(2)
+            
+            # Generar fecha_id desde periodo_id (YYYYMM → YYYYMM01)
+            result['fecha_id'] = (result['periodo_id'] * 100 + 1).astype(int)
+            
+            # Agregar surrogate key (PK)
+            result.insert(0, 'estado_resultados_id', range(1, len(result) + 1))
             
             logger.info(f"✓ fact_estado_resultados: {len(result):,} registros agregados")
             logger.info(f"   Períodos: {result['periodo_id'].nunique()}, Cuentas: {result['cuenta_id'].nunique()}")

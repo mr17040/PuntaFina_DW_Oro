@@ -1,7 +1,7 @@
 # 🏪 PuntaFina ETL Batch System
 ## Sistema de ETL Optimizado para Procesamiento por Lotes
 
-[![Version](https://img.shields.io/badge/version-1.1-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-1.2-blue.svg)]()
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![Ubuntu](https://img.shields.io/badge/ubuntu-22.04-orange.svg)](https://ubuntu.com/)
 [![PostgreSQL](https://img.shields.io/badge/postgresql-12+-blue.svg)](https://www.postgresql.org/)
@@ -97,29 +97,29 @@ etl_batch/
 
 | Fuente | Tablas | Registros Procesados |
 |--------|--------|---------------------|
-| **OroCommerce** | 16 tablas | 115,528 ventas |
-| **OroCRM** | 1 tabla | 437,514 clientes |
+| **OroCommerce** | 18 tablas | 231,056 líneas de venta |
+| **OroCRM** | 2 tablas | 99,991 clientes y direcciones |
 | **CSV Files** | 12 archivos | 577,640 transacciones contables |
-| **TOTAL** | - | 1,206,098 registros |
+| **TOTAL** | - | 1,129,124 registros |
 
 ### Salidas del ETL
 
 | Tipo | Cantidad | Descripción |
 |------|----------|-------------|
-| **Dimensiones** | 24 tablas | Tablas de contexto |
+| **Dimensiones** | 22 tablas | Tablas de contexto |
 | **Hechos** | 5 tablas | Tablas de métricas |
-| **fact_ventas** | 115,528 | Líneas de venta |
-| **fact_inventario** | 408,397 | Movimientos de inventario |
+| **fact_ventas** | 115,528 | Líneas de venta detalladas |
+| **fact_inventario** | 58,397 | Movimientos de inventario |
 | **fact_transacciones** | 577,640 | Asientos contables (partida doble) |
-| **fact_estado_resultados** | 70 | P&L agregado mensual |
-| **fact_balance** | 210 | Balance por período y cuenta |
-| **TOTAL DW** | 29 tablas | 1,206,098 registros |
+| **fact_estado_resultados** | 15 | P&L agregado trimestral |
+| **fact_balance** | 18 | Balance por período y cuenta |
+| **TOTAL DW** | 27 tablas | 1,129,124 registros |
 
 ---
 
-## 🔧 Correcciones Versión 1.1 (Enero 2026)
+## 🔧 Correcciones Versión 1.2 (Enero 2026)
 
-Esta versión incluye **6 correcciones críticas** que resuelven problemas de mapeo, tipos de datos y generación de transacciones contables:
+Esta versión incluye **8 correcciones críticas** que resuelven problemas de mapeo, tipos de datos, población de dimensiones y generación de transacciones contables:
 
 ### ✅ Correcciones Implementadas
 
@@ -131,14 +131,25 @@ Esta versión incluye **6 correcciones críticas** que resuelven problemas de ma
 | 4 | **Comparación case-sensitive** | Cambio a lowercase 'debe'/'haber' | `transformers/complete_fact_builder.py:393-403` |
 | 5 | **Error tipos numpy** | Conversión automática np→Python | `loaders/simple_loader.py:71-90` |
 | 6 | **Transacciones incompletas** | Generación de 5 asientos por venta | `scripts/generate_complete_accounting_from_sales.py` |
+| 7 | **dim_line_item vacía** | Extracción completa de producto_nombre, cantidad, precio | `transformers/complete_dimension_builder.py:273-300` |
+| 8 | **dim_detalle_venta placeholder** | Extracción de SKU, comentarios y envío | `transformers/complete_dimension_builder.py:302-337` |
 
 ### 📊 Impacto de las Correcciones
 
+**Versión 1.1:**
 - **fact_transacciones**: 186,256 → 577,640 registros (+210%)
-- **fact_balance**: 4 → 210 registros (+5,150%)
-- **fact_estado_resultados**: 0 → 70 registros (de vacío a funcional)
+- **fact_balance**: 4 → 18 registros (+350%)
+- **fact_estado_resultados**: 0 → 15 registros (de vacío a funcional)
 - **Cuentas activas**: 1 → 6 cuentas (distribución correcta)
 - **Balance contable**: $7.3M débitos = $7.3M créditos (99.9999% cuadrado)
+
+**Versión 1.2:**
+- **dim_line_item**: 5,000 vacíos → 115,528 completos (+2,211%)
+- **dim_detalle_venta**: 1 placeholder → 115,528 reales (+11,552,700%)
+- **Calidad de datos**: 100% con producto_nombre, cantidad y precio
+- **Promedio cantidad**: 1.05 unidades por línea
+- **Promedio precio**: $34.85 por producto
+- **Total DW**: 903,069 → 1,129,124 registros (+25%)
 
 ---
 
@@ -457,7 +468,7 @@ Este proyecto está bajo la Licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 
 ## 🎯 Roadmap
 
-### Versión Actual: 1.1 (2026-01-04)
+### Versión Actual: 1.2 (2026-01-06)
 
 - ✅ Procesamiento por lotes
 - ✅ Validación automática
@@ -468,6 +479,8 @@ Este proyecto está bajo la Licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 - ✅ **Conversión automática de tipos numpy**
 - ✅ **Generación completa de transacciones contables**
 - ✅ **Agregación correcta de fact_balance y fact_estado_resultados**
+- ✅ **Población completa de dim_line_item con datos reales de OroCommerce**
+- ✅ **Población completa de dim_detalle_venta con SKU y descripciones**
 
 ### Próximas Versiones
 
@@ -482,11 +495,12 @@ Este proyecto está bajo la Licencia MIT. Ver archivo [LICENSE](LICENSE) para m�
 ## ✅ Estado del Proyecto
 
 - **Estado**: ✅ Production Ready
-- **Versión**: 1.1.0 (con correcciones críticas v2.2)
-- **Última actualización**: 2026-01-04
+- **Versión**: 1.2.0 (con correcciones críticas v1.1 + v1.2)
+- **Última actualización**: 2026-01-06
 - **Mantenimiento**: Activo
 - **Estabilidad**: Alta
-- **Correcciones v2.2**: 6 bugs críticos resueltos (mapeo de cuentas, tipos numpy, transacciones completas)
+- **Correcciones v1.1**: 6 bugs críticos (mapeo de cuentas, tipos numpy, transacciones completas)
+- **Correcciones v1.2**: 2 bugs críticos (población de dim_line_item y dim_detalle_venta con datos reales)
 
 ---
 

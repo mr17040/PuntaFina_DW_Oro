@@ -21,7 +21,9 @@ class SimpleDatabaseLoader:
             'port': int(os.getenv('DW_DB_PORT')),
             'dbname': os.getenv('DW_DB_NAME'),
             'user': os.getenv('DW_DB_USER'),
-            'password': os.getenv('DW_DB_PASS')
+            'password': os.getenv('DW_DB_PASS'),
+            'connect_timeout': 120,
+            'options': '-c statement_timeout=1800000'
         }
     
     def load_to_database(self, file_path: str, table_name: str) -> int:

@@ -9,20 +9,20 @@
 # ----------------------------------------------------------------------------
 batch:
   # Tamaño de lote para procesamiento (registros por batch)
-  chunk_size: 1000
+  chunk_size: 15000
   
   # Número máximo de trabajadores paralelos
-  max_workers: 4
+  max_workers: 8
   
   # Tiempo máximo de ejecución por lote (segundos)
-  timeout: 300
+  timeout: 1800
   
   # Reintentos en caso de error
   max_retries: 3
   retry_delay: 5
   
   # Memoria máxima por worker (MB)
-  max_memory_mb: 512
+  max_memory_mb: 800
 
 # ----------------------------------------------------------------------------
 # RUTAS DE DATOS
@@ -102,30 +102,29 @@ dimensions:
     - dim_cliente
     - dim_producto
     - dim_orden
+    - dim_impuestos
     - dim_sitio_web
     - dim_canal
     - dim_direccion
     - dim_envio
     - dim_pago
-    - dim_impuestos
-    - dim_promocion
-    - dim_line_item
     - dim_estado_orden
     - dim_estado_pago
+    - dim_promocion
+    - dim_line_item
+    - dim_categoria_producto
     
   # Dimensiones del módulo de inventario
   inventario:
     - dim_almacen
     - dim_proveedor
     - dim_tipo_movimiento
-    - dim_categoria_producto
     
   # Dimensiones del módulo de finanzas
   finanzas:
     - dim_cuenta_contable
     - dim_centro_costo
     - dim_tipo_transaccion
-    - dim_periodo_contable
 
 # ----------------------------------------------------------------------------
 # CONFIGURACIÓN DE TABLAS DE HECHOS
@@ -287,7 +286,7 @@ loading:
   strategy: "truncate_and_load"  # truncate_and_load, incremental, upsert
   
   # Tamaño de batch para inserts
-  insert_batch_size: 500
+  insert_batch_size: 10000
   
   # Usar COPY en lugar de INSERT (más rápido)
   use_copy: true

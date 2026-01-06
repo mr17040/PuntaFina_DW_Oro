@@ -23,6 +23,27 @@ class CompleteDimensionBuilder:
     def __init__(self):
         self.oro_conn = self._get_oro_connection()
         self.crm_conn = self._get_crm_connection()
+    
+    def build(self, dimension_name: str, dimension_config: Dict[str, Any] = None) -> pd.DataFrame:
+        """
+        Método genérico para construir cualquier dimensión
+        Delegación a métodos específicos
+        """
+        method_name = f"build_{dimension_name}"
+        if hasattr(self, method_name):
+            method = getattr(self, method_name)
+            return method()
+        else:
+            logger.warning(f"Dimensión {dimension_name} no implementada en CompleteDimensionBuilder")
+            return pd.DataFrame()
+    
+    def get_schema(self, dimension_name: str) -> Dict[str, str]:
+        """
+        Retorna el esquema de la dimensión para el loader
+        Este método es requerido por el orchestrator pero no lo usamos
+        porque las dimensiones ya tienen sus tablas creadas
+        """
+        return {}
         
     def _get_oro_connection(self):
         """Conexión a OroCommerce"""
@@ -250,26 +271,68 @@ class CompleteDimensionBuilder:
         return df
     
     def build_dim_line_item(self) -> pd.DataFrame:
-        """Construir dim_line_item (lookup table para atributos degenerados)"""
+        """Construir dim_line_item desde oro_order_line_item"""
         logger.info("📝 Construyendo dim_line_item...")
         
         query = """
         SELECT 
             id as line_item_externo_id,
-            order_id,
-            product_id
+            product_name as producto_nombre,
+            quantity as cantidad,
+            value as precio_unitario
         FROM oro_order_line_item
+        WHERE id IS NOT NULL
         ORDER BY id
-        LIMIT 5000
         """
         
         df = pd.read_sql_query(query, self.oro_conn)
-        df['numero_linea'] = df.groupby('order_id').cumcount() + 1
-        df['tipo_linea'] = 'Producto'
+        
+        # Asignar surrogate keys
+        df.insert(0, 'line_item_id', range(1, len(df) + 1))
+        
+        # Limpiar y convertir tipos
+        df['cantidad'] = pd.to_numeric(df['cantidad'], errors='coerce').fillna(0).round(2)
+        df['precio_unitario'] = pd.to_numeric(df['precio_unitario'], errors='coerce').fillna(0).round(2)
+        df['producto_nombre'] = df['producto_nombre'].fillna('Sin nombre').astype(str)
         
         logger.info(f"✓ dim_line_item: {len(df):,} registros desde oro_order_line_item")
-        logger.info("  NOTA: Campo 'total_linea' eliminado - calculable como cantidad * precio_unitario")
-        return df
+        logger.info(f"   Productos únicos: {df['producto_nombre'].nunique()}")
+        return df[['line_item_id', 'line_item_externo_id', 'producto_nombre', 'cantidad', 'precio_unitario']]
+    
+    def build_dim_detalle_venta(self) -> pd.DataFrame:
+        """Construir dim_detalle_venta desde oro_order_line_item"""
+        logger.info("📋 Construyendo dim_detalle_venta...")
+        
+        query = """
+        SELECT 
+            id as detalle_externo_id,
+            product_sku as codigo,
+            COALESCE(comment, 
+                     CASE 
+                         WHEN shipping_method IS NOT NULL 
+                         THEN 'Envío: ' || shipping_method || 
+                              CASE WHEN shipping_method_type IS NOT NULL 
+                                   THEN ' (' || shipping_method_type || ')' 
+                                   ELSE '' END
+                         ELSE 'Venta estándar'
+                     END) as descripcion
+        FROM oro_order_line_item
+        WHERE id IS NOT NULL
+        ORDER BY id
+        """
+        
+        df = pd.read_sql_query(query, self.oro_conn)
+        
+        # Asignar surrogate keys
+        df.insert(0, 'detalle_id', range(1, len(df) + 1))
+        
+        # Limpiar datos
+        df['codigo'] = df['codigo'].fillna('').astype(str)
+        df['descripcion'] = df['descripcion'].fillna('Sin descripción').astype(str)
+        
+        logger.info(f"✓ dim_detalle_venta: {len(df):,} registros desde oro_order_line_item")
+        logger.info(f"   Códigos únicos: {df['codigo'].nunique()}")
+        return df[['detalle_id', 'codigo', 'descripcion']]
     
     # ==================== DIMENSIONES DESDE CSV ====================
     
