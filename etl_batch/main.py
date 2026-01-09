@@ -15,6 +15,8 @@ import yaml
 import click
 from dotenv import load_dotenv
 from typing import Dict, Any, List
+import psycopg2
+from psycopg2.extras import execute_values
 
 # Agregar ruta del proyecto
 sys.path.insert(0, str(Path(__file__).parent))
@@ -106,7 +108,7 @@ class ETLOrchestrator:
             # -1. Desbloquear tablas forzadamente
             self.logger.info("\n🔓 FASE -1: DESBLOQUEO FORZADO DE TABLAS")
             self._force_unlock_tables()
-            
+
             # 1. Extracción
             self.logger.info("\n📥 FASE 1: EXTRACCIÓN")
             extraction_results = self._run_extraction()
@@ -154,7 +156,7 @@ class ETLOrchestrator:
     def _force_unlock_tables(self):
         """Desbloquear forzadamente todas las tablas eliminando conexiones idle y locks"""
         import psycopg2
-        
+
         try:
             conn = psycopg2.connect(
                 host=os.getenv("DW_DB_HOST"),
@@ -162,26 +164,29 @@ class ETLOrchestrator:
                 dbname=os.getenv("DW_DB_NAME"),
                 user=os.getenv("DW_DB_USER"),
                 password=os.getenv("DW_DB_PASS"),
-                connect_timeout=30
+                connect_timeout=30,
             )
             cursor = conn.cursor()
-            
+
             # 1. Terminar todas las conexiones idle in transaction
             self.logger.info("   💥 Terminando conexiones idle...")
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT pg_terminate_backend(pid), pid, usename, state, query_start
                 FROM pg_stat_activity 
                 WHERE datname = current_database() 
                 AND pid <> pg_backend_pid()
                 AND state IN ('idle in transaction', 'idle in transaction (aborted)')
-            """)
+            """
+            )
             terminated = cursor.fetchall()
             if terminated:
                 self.logger.info(f"   ✓ Terminadas {len(terminated)} conexiones idle")
-            
+
             # 2. Cancelar queries largas (más de 5 minutos)
             self.logger.info("   ⏱️  Cancelando queries largas...")
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT pg_cancel_backend(pid), pid, usename, 
                        EXTRACT(EPOCH FROM (NOW() - query_start)) as duration
                 FROM pg_stat_activity 
@@ -190,14 +195,16 @@ class ETLOrchestrator:
                 AND state = 'active'
                 AND query_start < NOW() - INTERVAL '5 minutes'
                 AND query NOT LIKE '%pg_stat_activity%'
-            """)
+            """
+            )
             cancelled = cursor.fetchall()
             if cancelled:
                 self.logger.info(f"   ✓ Canceladas {len(cancelled)} queries largas")
-            
+
             # 3. Liberar locks de tablas
             self.logger.info("   🔒 Liberando locks de tablas...")
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT pg_terminate_backend(a.pid)
                 FROM pg_locks l
                 JOIN pg_stat_activity a ON l.pid = a.pid
@@ -205,30 +212,37 @@ class ETLOrchestrator:
                 AND a.datname = current_database()
                 AND a.pid <> pg_backend_pid()
                 AND a.state <> 'active'
-            """)
+            """
+            )
             unlocked = cursor.fetchall()
             if unlocked:
                 self.logger.info(f"   ✓ Liberados {len(unlocked)} locks")
-            
+
             conn.commit()
             cursor.close()
             conn.close()
-            
+
             self.logger.info("   ✅ Desbloqueo forzado completado")
-            
+
         except Exception as e:
             self.logger.warning(f"   ⚠️  Error en desbloqueo: {e}")
 
     def _cleanup_obsolete_tables(self):
         """Limpiar tablas obsoletas del modelo"""
         import psycopg2
-        
+
         obsolete_tables = [
-            'dim_sitio_web', 'dim_canal', 'dim_direccion', 'dim_envio',
-            'dim_pago', 'dim_promocion', 'dim_line_item', 'dim_estado_orden',
-            'dim_estado_pago', 'dim_categoria_producto'
+            "dim_sitio_web",
+            "dim_canal",
+            "dim_direccion",
+            "dim_envio",
+            "dim_pago",
+            "dim_line_item",
+            "dim_estado_orden",
+            "dim_estado_pago",
+            "dim_categoria_producto",
         ]
-        
+
         try:
             conn = psycopg2.connect(
                 host=os.getenv("DW_DB_HOST"),
@@ -237,23 +251,23 @@ class ETLOrchestrator:
                 user=os.getenv("DW_DB_USER"),
                 password=os.getenv("DW_DB_PASS"),
                 connect_timeout=120,
-                options="-c statement_timeout=1800000"
+                options="-c statement_timeout=1800000",
             )
             cursor = conn.cursor()
-            
+
             for table in obsolete_tables:
                 try:
                     cursor.execute(f"DROP TABLE IF EXISTS {table} CASCADE")
                     self.logger.info(f"   ✓ Eliminada tabla obsoleta: {table}")
                 except Exception as e:
                     self.logger.warning(f"   ⚠️  No se pudo eliminar {table}: {e}")
-            
+
             conn.commit()
             cursor.close()
             conn.close()
-            
+
             self.logger.info("   ✅ Limpieza de estructura completada")
-            
+
         except Exception as e:
             self.logger.error(f"   ❌ Error en limpieza: {e}")
 
@@ -262,15 +276,20 @@ class ETLOrchestrator:
         results = {"database": {}, "csv": {}, "total_records": 0}
 
         self.logger.info("   📊 Verificando fuentes de datos disponibles...")
-        
+
         # Verificar OroCommerce
-        self.logger.info("   ✓ orocommerce: oro_customer, oro_order, oro_product, oro_order_line_item")
-        results["database"]["orocommerce"] = {"tables": 4, "records": 177000}  # Estimado
-        
-        # Verificar OroCRM  
+        self.logger.info(
+            "   ✓ orocommerce: oro_customer, oro_order, oro_product, oro_order_line_item"
+        )
+        results["database"]["orocommerce"] = {
+            "tables": 4,
+            "records": 177000,
+        }  # Estimado
+
+        # Verificar OroCRM
         self.logger.info("   ✓ oro_crm: orocrm_channel")
         results["database"]["orocrm"] = {"tables": 1, "records": 5}
-        
+
         # Verificar CSVs
         csv_path = Path(__file__).parent.parent / "data" / "inputs"
         csv_files = []
@@ -278,7 +297,7 @@ class ETLOrchestrator:
             csv_files = list(csv_path.rglob("*.csv"))
             self.logger.info(f"   ✓ {len(csv_files)} archivos CSV en data/inputs/")
             results["csv"] = {"files": len(csv_files), "records": 700000}  # Estimado
-        
+
         results["total_records"] = (
             results["database"]["orocommerce"]["records"]
             + results["database"]["orocrm"]["records"]
@@ -292,180 +311,220 @@ class ETLOrchestrator:
         return results
 
     def _run_dimension_building(self) -> Dict[str, Any]:
-        """Fase de construcción de dimensiones - Carga directa desde origen"""
+        """Fase de construcción de dimensiones - Usando CompleteDimensionBuilder"""
         results = {"dimensions_built": [], "total_records": 0, "errors": []}
 
-        self.logger.info("   🔨 Cargando dimensiones directamente desde origen...")
-        
-        try:
-            # Ejecutar script de carga de dimensiones
-            import subprocess
-            script_path = Path(__file__).parent.parent / "cargar_dimensiones_origen.py"
-            
-            if not script_path.exists():
-                raise FileNotFoundError(f"Script no encontrado: {script_path}")
-            
-            result = subprocess.run(
-                ['python3', str(script_path)],
-                capture_output=True,
-                text=True,
-                timeout=600,  # 10 minutos timeout
-                cwd=str(script_path.parent)
-            )
-            
-            if result.returncode != 0:
-                self.logger.error(f"   ❌ Error en carga de dimensiones:\n{result.stderr}")
-                results["errors"].append({"script": "cargar_dimensiones_origen.py", "error": result.stderr})
-            else:
-                self.logger.info(result.stdout)
-                
-                # Contar registros cargados
-                import psycopg2
-                conn = psycopg2.connect(
-                    host=os.getenv("DW_DB_HOST"),
-                    port=int(os.getenv("DW_DB_PORT")),
-                    dbname=os.getenv("DW_DB_NAME"),
-                    user=os.getenv("DW_DB_USER"),
-                    password=os.getenv("DW_DB_PASS")
-                )
-                cursor = conn.cursor()
-                
-                dimensions = [
-                    'dim_fecha', 'dim_cliente', 'dim_producto', 'dim_orden',
-                    'dim_almacen', 'dim_proveedor', 'dim_tipo_movimiento',
-                    'dim_centro_costo', 'dim_tipo_transaccion', 'dim_cuenta_contable',
-                    'dim_impuestos', 'dim_usuario', 'dim_periodo'
-                ]
-                
-                for dim in dimensions:
-                    try:
-                        cursor.execute(f"SELECT COUNT(*) FROM {dim}")
-                        count = cursor.fetchone()[0]
-                        results["dimensions_built"].append({
-                            "name": dim,
-                            "records": count,
-                            "source": "direct_load"
-                        })
-                        results["total_records"] += count
-                        self.logger.info(f"      ✓ {dim}: {count:,} registros")
-                    except Exception as e:
-                        self.logger.warning(f"      ⚠️  {dim}: {e}")
-                
-                cursor.close()
-                conn.close()
-                
-        except subprocess.TimeoutExpired:
-            self.logger.error("   ❌ Timeout en carga de dimensiones")
-            results["errors"].append({"error": "Timeout"})
-        except Exception as e:
-            self.logger.error(f"   ❌ Error ejecutando carga: {e}")
-            results["errors"].append({"error": str(e)})
-
         self.logger.info(
-            f"\n   ✅ Dimensiones completadas: {results['total_records']:,} registros totales"
+            "   🔨 Construyendo dimensiones con CompleteDimensionBuilder..."
         )
+
+        try:
+            # Usar CompleteDimensionBuilder para construir y cargar dimensiones
+            from transformers.complete_dimension_builder import CompleteDimensionBuilder
+            from psycopg2.extras import execute_values
+            import pandas as pd
+
+            builder = CompleteDimensionBuilder()
+
+            # Conexión al DW
+            conn = psycopg2.connect(
+                host=os.getenv("DW_DB_HOST"),
+                port=int(os.getenv("DW_DB_PORT")),
+                dbname=os.getenv("DW_DB_NAME"),
+                user=os.getenv("DW_DB_USER"),
+                password=os.getenv("DW_DB_PASS"),
+            )
+            conn.autocommit = True
+
+            # FIRST: Truncate all fact tables to allow dimension truncation
+            self.logger.info("   🧹 Pre-truncando fact tables...")
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    "TRUNCATE TABLE fact_ventas, fact_inventario, fact_transacciones CASCADE"
+                )
+                self.logger.info("   ✓ Fact tables truncadas")
+            except Exception as e:
+                self.logger.warning(f"   ⚠️  Error truncando facts: {e}")
+            cursor.close()
+
+            # Lista de dimensiones con su método y si requiere OVERRIDING SYSTEM VALUE
+            dimensions_to_build = [
+                ("dim_fecha", builder.build_dim_fecha, False),
+                ("dim_producto", builder.build_dim_producto, False),
+                ("dim_cliente", builder.build_dim_cliente, False),
+                ("dim_orden", builder.build_dim_orden, False),
+                ("dim_usuario", builder.build_dim_usuario, False),
+                ("dim_cuenta_contable", builder.build_dim_cuenta_contable, False),
+                ("dim_impuestos", builder.build_dim_impuestos, True),
+                ("dim_promocion", builder.build_dim_promocion, False),
+                ("dim_almacen", builder.build_dim_almacen, False),
+                ("dim_proveedor", builder.build_dim_proveedor, False),
+                ("dim_tipo_movimiento", builder.build_dim_tipo_movimiento, False),
+                ("dim_centro_costo", builder.build_dim_centro_costo, False),
+                ("dim_tipo_transaccion", builder.build_dim_tipo_transaccion, False),
+            ]
+
+            parquet_dir = Path(__file__).parent.parent / "data" / "outputs" / "parquet"
+            parquet_dir.mkdir(parents=True, exist_ok=True)
+
+            for dim_name, build_method, override_id in dimensions_to_build:
+                try:
+                    self.logger.info(f"      🔨 Construyendo {dim_name}...")
+
+                    # Construir dimensión usando el método específico
+                    df = build_method()
+
+                    if df is not None and len(df) > 0:
+                        # Guardar en parquet
+                        parquet_file = parquet_dir / f"{dim_name}.parquet"
+                        df.to_parquet(parquet_file, index=False)
+
+                        # Cargar a BD directamente
+                        cursor = conn.cursor()
+
+                        # TRUNCATE con CASCADE
+                        try:
+                            cursor.execute(f"TRUNCATE TABLE {dim_name} CASCADE")
+                        except Exception as trunc_e:
+                            self.logger.warning(
+                                f"         ⚠️  No se pudo truncar {dim_name}: {trunc_e}"
+                            )
+
+                        # Insertar registros
+                        columns = df.columns.tolist()
+                        values = [tuple(row) for row in df.values]
+
+                        # Para tablas con IDs explícitos usar OVERRIDING SYSTEM VALUE
+                        if override_id:
+                            insert_query = f"INSERT INTO {dim_name} ({', '.join(columns)}) OVERRIDING SYSTEM VALUE VALUES %s"
+                        else:
+                            insert_query = f"INSERT INTO {dim_name} ({', '.join(columns)}) VALUES %s"
+
+                        execute_values(cursor, insert_query, values, page_size=1000)
+
+                        # Después de insertar dim_cliente, insertar el registro por defecto
+                        if dim_name == "dim_cliente":
+                            try:
+                                cursor.execute(
+                                    """
+                                    INSERT INTO dim_cliente (cliente_id, cliente_externo_id, codigo_cliente, nombre, tipo_cliente, segmento, activo, fecha_registro, created_at)
+                                    VALUES (1, 0, 'CLI-DEFAULT', 'Cliente por Defecto', 'B2B', 'General', true, '2020-01-01', NOW())
+                                    ON CONFLICT (cliente_id) DO NOTHING
+                                """
+                                )
+                            except Exception:
+                                pass
+
+                        records = len(df)
+                        self.logger.info(
+                            f"         ✓ {dim_name}: {records:,} registros"
+                        )
+                        results["dimensions_built"].append(dim_name)
+                        results["total_records"] += records
+
+                        cursor.close()
+                    else:
+                        self.logger.warning(f"         ⚠️  {dim_name}: sin datos")
+
+                except Exception as e:
+                    self.logger.error(f"         ❌ Error en {dim_name}: {e}")
+                    results["errors"].append({"dimension": dim_name, "error": str(e)})
+
+            conn.close()
+            self.logger.info(
+                f"\n   ✅ Dimensiones completadas: {results['total_records']:,} registros totales"
+            )
+
+        except Exception as e:
+            self.logger.error(f"   ❌ Error construyendo dimensiones: {e}")
+            results["errors"].append({"error": str(e)})
 
         return results
 
     def _run_fact_building(self) -> Dict[str, Any]:
-        """Fase de construcción de tablas de hechos - Carga directa desde origen"""
+        """Fase de construcción de tablas de hechos usando CompleteFactBuilder"""
         results = {"facts_built": [], "total_records": 0, "errors": []}
 
-        self.logger.info("   🏗️  Cargando facts directamente desde origen...")
-        
+        self.logger.info("   🏗️  Construyendo facts con CompleteFactBuilder...")
+
         try:
-            # Ejecutar script de carga de facts
-            import subprocess
-            script_path = Path(__file__).parent.parent / "cargar_todos_facts.py"
-            
-            if not script_path.exists():
-                raise FileNotFoundError(f"Script no encontrado: {script_path}")
-            
-            result = subprocess.run(
-                ['python3', str(script_path)],
-                capture_output=True,
-                text=True,
-                timeout=1200,  # 20 minutos timeout
-                cwd=str(script_path.parent)
+            # Crear conexión al DW con autocommit
+            conn = psycopg2.connect(
+                host=os.getenv("DW_DB_HOST"),
+                port=int(os.getenv("DW_DB_PORT")),
+                dbname=os.getenv("DW_DB_NAME"),
+                user=os.getenv("DW_DB_USER"),
+                password=os.getenv("DW_DB_PASS"),
             )
-            
-            if result.returncode != 0:
-                self.logger.error(f"   ❌ Error en carga de facts:\n{result.stderr}")
-                results["errors"].append({"script": "cargar_todos_facts.py", "error": result.stderr})
-            else:
-                self.logger.info(result.stdout)
-                
-                # Contar registros cargados
-                import psycopg2
-                conn = psycopg2.connect(
-                    host=os.getenv("DW_DB_HOST"),
-                    port=int(os.getenv("DW_DB_PORT")),
-                    dbname=os.getenv("DW_DB_NAME"),
-                    user=os.getenv("DW_DB_USER"),
-                    password=os.getenv("DW_DB_PASS")
-                )
-                cursor = conn.cursor()
-                
-                facts = [
-                    'fact_ventas', 'fact_inventario', 'fact_transacciones',
-                    'fact_balance', 'fact_estado_resultados'
-                ]
-                
-                # Revisar si fact_ventas necesita cargarse
-                cursor.execute("SELECT COUNT(*) FROM fact_ventas")
-                ventas_count = cursor.fetchone()[0]
-                
-                if ventas_count == 0:
-                    self.logger.info("   🔄 fact_ventas vacío, recargando...")
-                    cursor.close()
-                    conn.close()
-                    
-                    ventas_script = Path(__file__).parent.parent / "cargar_fact_ventas.py"
-                    
-                    if ventas_script.exists():
-                        result = subprocess.run(
-                            ['python3', str(ventas_script)],
-                            capture_output=True,
-                            text=True,
-                            timeout=300,
-                            cwd=str(ventas_script.parent)
-                        )
-                        if result.returncode == 0:
-                            self.logger.info("      ✓ fact_ventas recargada")
-                    
-                    # Reconectar para contar registros
-                    conn = psycopg2.connect(
-                        host=os.getenv("DW_DB_HOST"),
-                        port=int(os.getenv("DW_DB_PORT")),
-                        dbname=os.getenv("DW_DB_NAME"),
-                        user=os.getenv("DW_DB_USER"),
-                        password=os.getenv("DW_DB_PASS")
-                    )
-                    cursor = conn.cursor()
-                
-                # Contar todos los facts
-                for fact in facts:
-                    try:
-                        cursor.execute(f"SELECT COUNT(*) FROM {fact}")
-                        count = cursor.fetchone()[0]
-                        results["facts_built"].append({
-                            "name": fact,
-                            "records": count,
-                            "source": "direct_load"
-                        })
-                        results["total_records"] += count
-                        self.logger.info(f"      ✓ {fact}: {count:,} registros")
-                    except Exception as e:
-                        self.logger.warning(f"      ⚠️  {fact}: {e}")
-                
-                cursor.close()
-                conn.close()
-                
-        except subprocess.TimeoutExpired:
-            self.logger.error("   ❌ Timeout en carga de facts")
-            results["errors"].append({"error": "Timeout"})
+            conn.autocommit = True
+
+            # Crear builder pasando la conexión
+            builder = CompleteFactBuilder(dw_conn=conn)
+            cursor = conn.cursor()
+
+            # ===== FACT_VENTAS =====
+            self.logger.info("      🔨 Construyendo fact_ventas...")
+            try:
+                df = builder.build_fact_ventas()
+                if df is not None and len(df) > 0:
+                    cursor.execute("TRUNCATE TABLE fact_ventas CASCADE")
+                    columns = df.columns.tolist()
+                    values = [tuple(row) for row in df.values]
+                    insert_query = f"INSERT INTO fact_ventas ({', '.join(columns)}) VALUES %s"
+                    execute_values(cursor, insert_query, values, page_size=1000)
+                    self.logger.info(f"         ✓ fact_ventas: {len(df):,} registros")
+                    results["facts_built"].append("fact_ventas")
+                    results["total_records"] += len(df)
+                else:
+                    self.logger.warning("         ⚠️  fact_ventas: sin datos")
+            except Exception as e:
+                self.logger.error(f"         ❌ Error en fact_ventas: {e}")
+                results["errors"].append({"fact": "fact_ventas", "error": str(e)})
+
+            # ===== FACT_INVENTARIO =====
+            self.logger.info("      🔨 Construyendo fact_inventario...")
+            try:
+                df = builder.build_fact_inventario()
+                if df is not None and len(df) > 0:
+                    cursor.execute("TRUNCATE TABLE fact_inventario CASCADE")
+                    columns = df.columns.tolist()
+                    values = [tuple(row) for row in df.values]
+                    insert_query = f"INSERT INTO fact_inventario ({', '.join(columns)}) VALUES %s"
+                    execute_values(cursor, insert_query, values, page_size=1000)
+                    self.logger.info(f"         ✓ fact_inventario: {len(df):,} registros")
+                    results["facts_built"].append("fact_inventario")
+                    results["total_records"] += len(df)
+                else:
+                    self.logger.warning("         ⚠️  fact_inventario: sin datos")
+            except Exception as e:
+                self.logger.error(f"         ❌ Error en fact_inventario: {e}")
+                results["errors"].append({"fact": "fact_inventario", "error": str(e)})
+
+            # ===== FACT_TRANSACCIONES =====
+            self.logger.info("      🔨 Construyendo fact_transacciones...")
+            try:
+                df = builder.build_fact_transacciones()
+                if df is not None and len(df) > 0:
+                    cursor.execute("TRUNCATE TABLE fact_transacciones CASCADE")
+                    columns = df.columns.tolist()
+                    values = [tuple(row) for row in df.values]
+                    insert_query = f"INSERT INTO fact_transacciones ({', '.join(columns)}) VALUES %s"
+                    execute_values(cursor, insert_query, values, page_size=1000)
+                    self.logger.info(f"         ✓ fact_transacciones: {len(df):,} registros")
+                    results["facts_built"].append("fact_transacciones")
+                    results["total_records"] += len(df)
+                else:
+                    self.logger.warning("         ⚠️  fact_transacciones: sin datos")
+            except Exception as e:
+                self.logger.error(f"         ❌ Error en fact_transacciones: {e}")
+                results["errors"].append({"fact": "fact_transacciones", "error": str(e)})
+
+            cursor.close()
+            conn.close()
+
         except Exception as e:
-            self.logger.error(f"   ❌ Error ejecutando carga: {e}")
+            self.logger.error(f"   ❌ Error construyendo facts: {e}")
             results["errors"].append({"error": str(e)})
 
         self.logger.info(
@@ -478,31 +537,46 @@ class ETLOrchestrator:
         """Fase de carga a base de datos - Ya realizada en pasos anteriores"""
         results = {"tables_loaded": [], "total_records": 0, "errors": []}
 
-        self.logger.info("   ℹ️  La carga se realizó directamente en las fases anteriores")
-        self.logger.info("   ℹ️  Los datos ya están en la base de datos datawarehouse_bi")
-        
+        self.logger.info(
+            "   ℹ️  La carga se realizó directamente en las fases anteriores"
+        )
+        self.logger.info(
+            "   ℹ️  Los datos ya están en la base de datos datawarehouse_bi"
+        )
+
         # Verificar conteo final
         try:
             import psycopg2
+
             conn = psycopg2.connect(
                 host=os.getenv("DW_DB_HOST"),
                 port=int(os.getenv("DW_DB_PORT")),
                 dbname=os.getenv("DW_DB_NAME"),
                 user=os.getenv("DW_DB_USER"),
-                password=os.getenv("DW_DB_PASS")
+                password=os.getenv("DW_DB_PASS"),
             )
             conn.autocommit = True  # Evitar problemas con transacciones
             cursor = conn.cursor()
-            
+
             all_tables = [
-                'dim_fecha', 'dim_cliente', 'dim_producto', 'dim_orden',
-                'dim_almacen', 'dim_proveedor', 'dim_tipo_movimiento',
-                'dim_centro_costo', 'dim_tipo_transaccion', 'dim_cuenta_contable',
-                'dim_impuestos', 'dim_usuario', 'dim_periodo',
-                'fact_ventas', 'fact_inventario', 'fact_transacciones',
-                'fact_balance', 'fact_estado_resultados'
+                "dim_fecha",
+                "dim_cliente",
+                "dim_producto",
+                "dim_orden",
+                "dim_almacen",
+                "dim_proveedor",
+                "dim_tipo_movimiento",
+                "dim_centro_costo",
+                "dim_tipo_transaccion",
+                "dim_cuenta_contable",
+                "dim_impuestos",
+                "dim_usuario",
+                "dim_promocion",
+                "fact_ventas",
+                "fact_inventario",
+                "fact_transacciones",
             ]
-            
+
             for table in all_tables:
                 try:
                     cursor.execute(f"SELECT COUNT(*) FROM {table}")
@@ -511,10 +585,10 @@ class ETLOrchestrator:
                     results["total_records"] += count
                 except Exception as e:
                     self.logger.warning(f"      ⚠️  {table}: {e}")
-            
+
             cursor.close()
             conn.close()
-            
+
         except Exception as e:
             self.logger.error(f"   ❌ Error verificando tablas: {e}")
             results["errors"].append({"error": str(e)})
@@ -528,15 +602,15 @@ class ETLOrchestrator:
     def _clean_fact_tables(self):
         """Limpiar todas las fact tables primero para evitar violaciones de FK"""
         import psycopg2
-        
+
         fact_tables = [
-            'fact_ventas',
-            'fact_inventario', 
-            'fact_transacciones',
-            'fact_balance',
-            'fact_estado_resultados'
+            "fact_ventas",
+            "fact_inventario",
+            "fact_transacciones",
+            "fact_balance",
+            "fact_estado_resultados",
         ]
-        
+
         try:
             conn = psycopg2.connect(
                 host=os.getenv("DW_DB_HOST"),
@@ -544,10 +618,10 @@ class ETLOrchestrator:
                 dbname=os.getenv("DW_DB_NAME"),
                 user=os.getenv("DW_DB_USER"),
                 password=os.getenv("DW_DB_PASS"),
-                connect_timeout=30
+                connect_timeout=30,
             )
             cursor = conn.cursor()
-            
+
             for table in fact_tables:
                 try:
                     cursor.execute(f"SET statement_timeout = '30s'")
@@ -558,10 +632,10 @@ class ETLOrchestrator:
                     # Si la tabla no existe, no es un error crítico
                     if "does not exist" not in str(e):
                         self.logger.warning(f"      ⚠️  {table}: {e}")
-            
+
             cursor.close()
             conn.close()
-            
+
         except Exception as e:
             self.logger.warning(f"   ⚠️  Error limpiando fact tables: {e}")
 
@@ -573,22 +647,30 @@ class ETLOrchestrator:
 
         try:
             import psycopg2
+
             conn = psycopg2.connect(
                 host=os.getenv("DW_DB_HOST"),
                 port=int(os.getenv("DW_DB_PORT")),
                 dbname=os.getenv("DW_DB_NAME"),
                 user=os.getenv("DW_DB_USER"),
-                password=os.getenv("DW_DB_PASS")
+                password=os.getenv("DW_DB_PASS"),
             )
             cursor = conn.cursor()
-            
+
             # Validar dimensiones
             dimensions = [
-                'dim_fecha', 'dim_cliente', 'dim_producto', 'dim_orden',
-                'dim_almacen', 'dim_proveedor', 'dim_tipo_movimiento',
-                'dim_centro_costo', 'dim_tipo_transaccion'
+                "dim_fecha",
+                "dim_cliente",
+                "dim_producto",
+                "dim_orden",
+                "dim_almacen",
+                "dim_proveedor",
+                "dim_tipo_movimiento",
+                "dim_centro_costo",
+                "dim_tipo_transaccion",
+                "dim_promocion",
             ]
-            
+
             dim_total = 0
             for dim in dimensions:
                 cursor.execute(f"SELECT COUNT(*) FROM {dim}")
@@ -596,42 +678,40 @@ class ETLOrchestrator:
                 dim_total += count
                 status = "✓" if count > 0 else "✗"
                 self.logger.info(f"      {status} {dim}: {count:,} registros")
-                results["validations"].append({
-                    "table": dim,
-                    "count": count,
-                    "passed": count > 0
-                })
+                results["validations"].append(
+                    {"table": dim, "count": count, "passed": count > 0}
+                )
                 if count == 0:
                     results["passed"] = False
-            
+
             # Validar facts
-            facts = ['fact_ventas', 'fact_inventario', 'fact_transacciones']
+            facts = ["fact_ventas", "fact_inventario", "fact_transacciones"]
             fact_total = 0
-            
+
             for fact in facts:
                 cursor.execute(f"SELECT COUNT(*) FROM {fact}")
                 count = cursor.fetchone()[0]
                 fact_total += count
                 status = "✓" if count > 0 else "⚠️"
                 self.logger.info(f"      {status} {fact}: {count:,} registros")
-                results["validations"].append({
-                    "table": fact,
-                    "count": count,
-                    "passed": count > 0
-                })
-            
+                results["validations"].append(
+                    {"table": fact, "count": count, "passed": count > 0}
+                )
+
             results["summary"] = {
                 "total_dimensions": dim_total,
                 "total_facts": fact_total,
-                "total_records": dim_total + fact_total
+                "total_records": dim_total + fact_total,
             }
-            
+
             cursor.close()
             conn.close()
-            
-            self.logger.info(f"\n      ✓ Total en DW: {dim_total + fact_total:,} registros")
+
+            self.logger.info(
+                f"\n      ✓ Total en DW: {dim_total + fact_total:,} registros"
+            )
             self.logger.info("      ✓ Integridad verificada")
-            
+
         except Exception as e:
             self.logger.error(f"      ✗ Error en validación: {e}")
             results["passed"] = False
